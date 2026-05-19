@@ -332,7 +332,7 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 [[package]]
 name = "cryiorust"
 version = "0.6.0"
-source = "git+https://git.3lp.cx/dyadkin/cryiorust#8cd534b5555413b0088cf9dcba15380a4edbc960"
+source = "git+https://git.3lp.cx/dyadkin/cryiorust#67a82cdd6f145d0b902f99f7fda7720e0a254026"
 dependencies = [
  "askama",
  "base64",
@@ -480,7 +480,7 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 [[package]]
 name = "hdf5-bitshuffle"
 version = "0.9.1"
-source = "git+https://git.3lp.cx/dyadkin/cryiorust#8cd534b5555413b0088cf9dcba15380a4edbc960"
+source = "git+https://git.3lp.cx/dyadkin/cryiorust#67a82cdd6f145d0b902f99f7fda7720e0a254026"
 dependencies = [
  "cc",
  "hdf5-metno-src",
