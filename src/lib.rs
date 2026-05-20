@@ -1,8 +1,8 @@
-use cryiorust::{cbf::Cbf, frame::{Frame}, poni::Poni};
-use integrustio::integrator::{Cake, Diffractogram, Integrable, IntegrationType, Integrator, PatternType};
+use cryiorust::{cbf::Cbf, frame::{Array, Frame}, poni::Poni};
+use integrustio::integrator::{Cake, Diffractogram, Integrable, IntegrationType, Integrator, Pattern, PatternType};
 use core::f64;
-use std::{cmp::Ordering, path::Path, vec};
-
+use std::{cmp::Ordering, ops::Mul, path::Path, vec};
+use glob::glob;
 pub struct ImagePoni{
     pub poni:Poni,
     pub cbf:Cbf,
@@ -58,6 +58,33 @@ pub struct MultiFile{
 }
 
 impl MultiFile{
+
+    pub fn build(cbfdir:&String, ponidir: &String, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
+                chibins:usize, pfactor:f64) -> MultiFile {
+                    let pattern = format!("{cbfdir}/*.cbf");
+                    let cbffiles = glob(&pattern).unwrap();
+                    let mut ilist:Vec<ImagePoni> = Vec::new();
+                    for fresult in cbffiles{
+                        let cbffile = fresult.unwrap();
+                        let basename = cbffile.file_name().unwrap().to_str().unwrap().replace(".cbf", "");
+                        let ponifiles = glob(&format!("{ponidir}/*.poni")).unwrap();
+                        for presult in ponifiles{
+                            let ponifile = presult.unwrap();
+                            let pbasefile = ponifile.file_name().unwrap().to_str().unwrap().replace(".poni","");
+                            
+                            if basename == pbasefile{
+                                println!("{cbffile:?}, {ponifile:?}");
+                                ilist.push(ImagePoni::build(&ponifile, &cbffile));
+                                break;
+                            }
+                        }
+                    }
+                    if ilist.len() < 2{
+                        let nitems = ilist.len();
+                        panic!("build function requires at least 2 pairs of ponis and cbfs, found {nitems}. cbf and poni files must match in the base name")
+                    }
+                    MultiFile { ilist, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor }
+                }
     pub fn integrate_all(self)->Vec<Cake>{
         let mut cakes :Vec<Cake> = Vec::new();
         for ip in self.ilist{
@@ -66,12 +93,63 @@ impl MultiFile{
         cakes
     }
 
-    pub fn average_cakes(self, medianfilter:i32){
+    pub fn average_cakes(self, medianfilter:f64){
         let cakes = self.integrate_all();
-        let mut medianvec: Vec<f64> = Vec::new();
-        for cake in cakes{
-            let d = cake.cake.data();
+        //let mut medianvec: Vec<f64> = Vec::new();
+        let c0 = &cakes[0];
+        let rpos = &c0.radial_positions;
+        let azpos = &c0.azimuthal_positions;
+        let chisize = c0.cake.dim1();
+        let radsize = c0.cake.dim2();
+        
+        let mut avvec : Vec<f64> = vec![0.;c0.cake.len()];
+        let mut vec1d : Vec<f64> = vec![0.; radsize];
+        let mut div1d : Vec<f64> = vec![0.; radsize];
+        let mut sigma: Vec<f64> = vec![0.;radsize];
+        for i in 0..c0.cake.data().len(){
+            let index1d = i%radsize;
+            let mut atemp: Vec<f64> = Vec::new();
+            for c in &cakes{
+                let item = c.cake.data()[i];
+                if item > 0.{
+                atemp.push(item);
+                }
+            }
+            let mut div: f64 = 0.;
+            let mut intensity :f64 = 0.;
+            let med = getmedian(&atemp);
+            for val in atemp{
+                if !(val > med*medianfilter) & !(val < med/medianfilter){
+                    intensity += val;
+                    div += 1.;
+                }
+            }
+            intensity = intensity/div;
+            avvec[i] = intensity;
+            
+            if intensity > 0.{
+                vec1d[index1d] += intensity;
+                div1d[index1d] += 1.;
+            }
+        };
+
+        for j in 0..vec1d.len(){
+            let intj = vec1d[j];
+            vec1d[j] = intj/div1d[j];
+            sigma[j] = intj.powf(0.5)/div1d[j]; //approximation of error, square root intensity divide by number of values
         }
+        let a:Array = Array::with_data(chisize,radsize, avvec);
+        /*
+        let newp:Pattern = Pattern{
+            positions:rpos.clone(),
+            intensity: vec1d,
+            sigma: sigma,
+            new_line: '\n'
+        };
+        
+        
+        let newcake:Cake = Cake { radial_positions:rpos.clone(), azimuthal_positions: azpos.clone(), cake: a, radial: newp };
+         */
     }
 }
 
@@ -98,15 +176,15 @@ fn cmpf64(a:&f64,b:&f64)->Ordering{
     return Ordering::Equal;
     }
     
-fn floatcompare(f1:f64, f2:f64)->bool{
-    let b = (f1 > f2 - 0.01) & (f1 < f2+0.01);
-    b
-}
+
 
 #[cfg(test)]
 mod tests{
     use super::*;
-
+    fn floatcompare(f1:f64, f2:f64)->bool{
+        let b = (f1 > f2 - 0.01) & (f1 < f2+0.01);
+        b
+    }
     #[test]
     fn medtest(){
         let v = vec![1.3, 5.7, 2.2, 9.8, 7.3];
