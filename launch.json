@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug",
+            "program": "${fileDirname}/../target/debug/${fileBasenameNoExtension}",
+            
+            "args": ["--tthmin", "0.75", "--tthmax", "58", "--cbfdir", "D:/beamlineData/April2026/multipositions3/Si",
+                    "--ponidir", "D:/beamlineData/April2026/multipositions3/Si/poni"],
+            "cwd": "${workspaceRoot}",
+            "sourceLanguages": [
+                "rust"
+            ]
+        }
+    ]
+}

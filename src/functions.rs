@@ -1,52 +1,50 @@
-use cryiorust::{cbf::Cbf, frame::{Array, Frame}, poni::Poni};
-use integrustio::integrator::{Cake, Diffractogram, Integrable, IntegrationType, Integrator, Pattern, PatternType};
+use cryiorust::{cbf::Cbf, frame::{Array, Frame}, poni::{DetectorConfig, Poni}};
+use integrustio::integrator::{Cake, Integrator};
 use core::f64;
-use std::{cmp::Ordering, ops::Mul, path::Path, vec};
+use std::{cmp::Ordering, fs::File, io::{self, Write}, path::{Path, PathBuf}, sync::Arc, vec};
 use glob::glob;
 pub struct ImagePoni{
     pub poni:Poni,
     pub cbf:Cbf,
 }
 impl ImagePoni {
-    pub fn build(ponipath:&Path, cbfpath: &Path) -> ImagePoni{
-        let poni = Poni::read_file(ponipath).unwrap() ;
-        let cbf = Cbf::read_file(cbfpath).unwrap();
+    pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>) -> ImagePoni{
+        let poni = Poni::open(ponifile, dc).unwrap() ;
+        let cbf = Cbf::open(cbffile).unwrap();
+        //let dirname = cbffile.parent().unwrap();
         ImagePoni { poni, cbf }
     }
     pub fn integrate(self, tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
-                chibins: usize, pfactor: f64)->Diffractogram{
-        let ranges = [tthmin,tthmax];
-        let chirange = [chimin,chimax];
-        let data = Integrable{
-            array: self.cbf.array(),
-            radial_range: &ranges,
-            azimuthal_range: &chirange,
-            integration_type: IntegrationType::Cake
-        };
+                chibins: usize, pfactor: f64)->Cake{
         let mut i = Integrator::new();
         i.set_poni(self.poni);
         i.set_radial_bins(tthbins);
         i.set_azimuthal_bins(chibins);
         i.set_polarization(pfactor);
+        i.set_azimuthal_range(Some((chimin,chimax)));
+        i.set_radial_range(Some((tthmin,tthmax)));
         i.init(self.cbf.array());
-        let d = i.integrate(&data).unwrap();
-        d
+        let (cake, _) = i.integrate_cake(self.cbf.array()).unwrap();
+        cake
     }
 
     pub fn get_cake(self,tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
-                chibins: usize, pfactor: f64)->Cake{
-        let d = self.integrate(tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor);
-        let p: integrustio::integrator::PatternType = d.data;
-        let cake = match p{
-            PatternType::Cake(c) => c,
-            _=>panic!("some issue with getting cake image"),
-        };
+                chibins: usize, pfactor: f64, cakedir:&String)->Cake{
+        let mut fname = self.cbf.name().to_string();
+        fname.push_str(".edf");
+        let cake = self.integrate(tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor);
+        
+        if cakedir != ""{
+            
+            let cakefile = format!("{}/{}",cakedir,fname);
+            cake.store(cakefile, None).unwrap();
+        }
         cake
     }
 }
 
 
-pub struct MultiFile{
+pub(crate) struct MultiFile{
     ilist :Vec<ImagePoni>,
     tthmin: f64,
     tthmax: f64,
@@ -61,20 +59,31 @@ impl MultiFile{
 
     pub fn build(cbfdir:&String, ponidir: &String, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
                 chibins:usize, pfactor:f64) -> MultiFile {
+                    let mut dc = None;
                     let pattern = format!("{cbfdir}/*.cbf");
                     let cbffiles = glob(&pattern).unwrap();
+                    let mut cbffile: Option<Arc<PathBuf>>;
+                    
                     let mut ilist:Vec<ImagePoni> = Vec::new();
                     for fresult in cbffiles{
-                        let cbffile = fresult.unwrap();
-                        let basename = cbffile.file_name().unwrap().to_str().unwrap().replace(".cbf", "");
+                        cbffile = Some(Arc::new(fresult.unwrap()));
+                        let cbfclone = cbffile.clone();
+                        
+                        let basename = cbfclone.unwrap().file_name().unwrap().to_str().unwrap().replace(".cbf", "");
                         let ponifiles = glob(&format!("{ponidir}/*.poni")).unwrap();
                         for presult in ponifiles{
                             let ponifile = presult.unwrap();
                             let pbasefile = ponifile.file_name().unwrap().to_str().unwrap().replace(".poni","");
                             
                             if basename == pbasefile{
-                                println!("{cbffile:?}, {ponifile:?}");
-                                ilist.push(ImagePoni::build(&ponifile, &cbffile));
+                                
+                                println!("{:?}, {:?}", cbffile.clone().unwrap(),ponifile);
+                                let ip = match dc{
+                                    None => {let ip = ImagePoni::build(&ponifile,&cbffile.clone().unwrap(), None);
+                                    dc = ip.poni.detector_config.clone();ip},
+                                    Some(ref dc) => ImagePoni::build(&ponifile,&cbffile.clone().unwrap(), Some(dc.clone())),
+                                };
+                                ilist.push(ip);
                                 break;
                             }
                         }
@@ -83,18 +92,26 @@ impl MultiFile{
                         let nitems = ilist.len();
                         panic!("build function requires at least 2 pairs of ponis and cbfs, found {nitems}. cbf and poni files must match in the base name")
                     }
-                    MultiFile { ilist, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor }
+                    //let mut it = cbffiles.into_iter();
+                    
+                    MultiFile { ilist,  tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor }
                 }
-    pub fn integrate_all(self)->Vec<Cake>{
+    pub fn integrate_all(self, cakedir: &String)->Vec<Cake>{
         let mut cakes :Vec<Cake> = Vec::new();
+        let mut count = 0;
+        println!("integrating images");
         for ip in self.ilist{
-            cakes.push(ip.get_cake(self.tthmin, self.tthmax, self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor));
+            print!("{count}, ");
+            io::stdout().flush().unwrap();
+            cakes.push(ip.get_cake(self.tthmin, self.tthmax, self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir));
+            count += 1;
         };
         cakes
     }
 
-    pub fn average_cakes(self, medianfilter:f64){
-        let cakes = self.integrate_all();
+    pub fn average_cakes(self, medianfilter:f64, cakedir: &String, avdir: &String){
+        let cakes = self.integrate_all(cakedir);
+        println!("\naveraging cakes");
         //let mut medianvec: Vec<f64> = Vec::new();
         let c0 = &cakes[0];
         let rpos = &c0.radial_positions;
@@ -106,13 +123,17 @@ impl MultiFile{
         let mut vec1d : Vec<f64> = vec![0.; radsize];
         let mut div1d : Vec<f64> = vec![0.; radsize];
         let mut sigma: Vec<f64> = vec![0.;radsize];
-        for i in 0..c0.cake.data().len(){
+        let datalen = c0.cake.data().len();
+        println!("dim1: {chisize}");
+        println!("dim2: {radsize}");
+        println!("array size {datalen}");
+        for i in 0..datalen{
             let index1d = i%radsize;
             let mut atemp: Vec<f64> = Vec::new();
             for c in &cakes{
                 let item = c.cake.data()[i];
                 if item > 0.{
-                atemp.push(item);
+                    atemp.push(item);
                 }
             }
             let mut div: f64 = 0.;
@@ -124,7 +145,12 @@ impl MultiFile{
                     div += 1.;
                 }
             }
-            intensity = intensity/div;
+            if div > 0.1 {
+                intensity = intensity/div;
+            }
+            else {
+                intensity = 0.;
+            };
             avvec[i] = intensity;
             
             if intensity > 0.{
@@ -132,27 +158,37 @@ impl MultiFile{
                 div1d[index1d] += 1.;
             }
         };
-
+        println!("averaging 1d");
         for j in 0..vec1d.len(){
             let intj = vec1d[j];
             vec1d[j] = intj/div1d[j];
             sigma[j] = intj.powf(0.5)/div1d[j]; //approximation of error, square root intensity divide by number of values
         }
         let a:Array = Array::with_data(chisize,radsize, avvec);
-        /*
-        let newp:Pattern = Pattern{
-            positions:rpos.clone(),
-            intensity: vec1d,
-            sigma: sigma,
-            new_line: '\n'
-        };
+        println!("{vec1d:?}");
         
+
         
-        let newcake:Cake = Cake { radial_positions:rpos.clone(), azimuthal_positions: azpos.clone(), cake: a, radial: newp };
-         */
+        let mut newcake:Cake = Default::default(); 
+        newcake.cake = a; 
+        newcake.radial_positions = rpos.clone();
+        newcake.azimuthal_positions = azpos.clone();
+        newcake.radial.intensity = vec1d;   
+        newcake.radial.sigma = sigma;
+        newcake.radial.positions = rpos.clone();
+        let fnameav = format!("{avdir}/avcake.edf");
+        newcake.store(fnameav, None).unwrap();
     }
 }
 
+fn save1d(fname:String, vec1d: Vec<f64>){
+    let mut outstring = String::new();
+    for item in vec1d{
+        outstring = outstring + &String::from(format!("{item}\n"));
+    }
+    let mut file = File::create(fname).unwrap();
+    file.write(outstring.as_bytes()).unwrap();    
+}
 
 fn getmedian(medvec:&Vec<f64>)->f64{
     //let svec = sortvec(medvec);
@@ -160,6 +196,9 @@ fn getmedian(medvec:&Vec<f64>)->f64{
     svec.sort_by(cmpf64);
     let vlen = svec.len();
     let pos : usize = vlen/2;
+    if vlen == 0 {
+        return 0.;
+    }
     if vlen%2 == 0 {
         return (svec[pos-1] + svec[pos])/2.;
     }

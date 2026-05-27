@@ -1,4 +1,3 @@
-use std::path::Path;
 use clap::{Parser};
 
 /// program for processing X-ray scattering from multiple detector positions
@@ -31,6 +30,10 @@ pub(crate) struct Params{
     pub cbfdir: String,
     /// poni directory
     #[arg(short='o', long)]
-    pub ponidir: String,  
+    pub ponidir: String,
+    #[arg(short, long)]
+    pub savecakes: bool,
+    #[arg(short='u', long, default_value="cakes")]
+    pub cakesubdir: String,
 
 }

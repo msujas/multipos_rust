@@ -1,15 +1,13 @@
+use std::{fs::create_dir, time::Instant};
 use clap::Parser;
-use cryiorust::cbf;
-use integrustio::integrator::PatternType;
-use multipos_rust::{ImagePoni, MultiFile};
-use std::path::Path;
+use crate::functions::MultiFile;
 use crate::params::Params;
-use glob::glob;
-use std::ffi::OsStr;
 
+mod functions;
 mod params;
 
 fn main() {
+    let now = Instant::now();
     
     let ap = Params::parse();
     let tthmin = ap.tthmin;
@@ -21,28 +19,22 @@ fn main() {
     let pfactor = ap.pfactor;
     let cbfdir = &ap.cbfdir;
     let ponidir = &ap.ponidir;
-     
+    let savecakes = ap.savecakes;
+    let subdir = ap.cakesubdir;
 
+    let mut cakedir: String = String::from("");
 
-    let cbfpath = Path::new("D:/beamlineData/April2026/multipositions3/Si/Si_dty260.00_dtz117.50_001_0001p.cbf");
-    let ponipath = Path::new("D:/beamlineData/April2026/multipositions3/Si/poni/Si_dty260.00_dtz117.50_001_0001p.poni");
-    let ip = ImagePoni::build(ponipath, cbfpath);
-    let d = ip.integrate(0.75, 58.,5000, 2.,358., 356,0.85);
-    let p: integrustio::integrator::PatternType = d.data;
-    let cbfbase = cbfpath.file_name().unwrap().to_str().unwrap().replace(".cbf", "");
-    let ponibase = ponipath.file_name().unwrap().to_str().unwrap().replace(".poni", "");
-    println!("{cbfbase}");
-    println!("{ponibase}");
-    let b = cbfbase == ponibase ;
-    println!("{b}");
+    if savecakes {
+        cakedir.push_str(&format!("{cbfdir}/{subdir}"));
+        let _ = create_dir(&cakedir);
+    }
 
     let mf = MultiFile::build(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor);
-    p.store("D:/beamlineData/April2026/multipositions3/cake.edf", None, None).unwrap();
-    let cake = match p{
-        PatternType::Cake(c) => c,
-        _=>panic!("some issue with getting cake image"),
-    };
-    let d1 = cake.cake.dim1();
-    let d2 = cake.cake.dim2();
-    print!("d1: {d1}, d2 {d2}");
+    let e1 = now.elapsed();
+    println!("loading cbfs and ponis took {} s", e1.as_secs());
+    let avdir = format!("{cbfdir}/{subdir}");
+    mf.average_cakes(4., &cakedir, &avdir);
+    let elapsed =  now.elapsed();
+    println!("");
+    println!("program took {} s", elapsed.as_secs());
 }
