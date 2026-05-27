@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use clap::{Parser};
 
 /// program for processing X-ray scattering from multiple detector positions
@@ -20,7 +22,7 @@ pub(crate) struct Params{
     #[arg(short='a', long, default_value_t= 358.)]
     pub chimax : f64,
     /// number of chi bins
-    #[arg(short='i', long, default_value_t= 356)]
+    #[arg(short='i', long, default_value_t= 357)]
     pub chibins : usize,
     /// polarization factor
     #[arg(short, long, default_value_t = 0.85)]
@@ -35,5 +37,7 @@ pub(crate) struct Params{
     pub savecakes: bool,
     #[arg(short='u', long, default_value="cakes")]
     pub cakesubdir: String,
+    #[arg(short, long, default_value=None)]
+    pub maskfile: Option<String>,
 
 }

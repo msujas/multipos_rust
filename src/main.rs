@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::{fs::create_dir, time::Instant};
 use clap::Parser;
 use crate::functions::MultiFile;
@@ -21,6 +22,13 @@ fn main() {
     let ponidir = &ap.ponidir;
     let savecakes = ap.savecakes;
     let subdir = ap.cakesubdir;
+    let maskfilestr = ap.maskfile;
+    let tmp:String;
+    let maskfile = match maskfilestr {
+        None => None,
+        Some(s) => {tmp = s;
+                        Some(Path::new(&tmp))},
+    };
 
     let mut cakedir: String = String::from("");
 
@@ -29,7 +37,7 @@ fn main() {
         let _ = create_dir(&cakedir);
     }
 
-    let mf = MultiFile::build(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor);
+    let mf = MultiFile::build(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile);
     let e1 = now.elapsed();
     println!("loading cbfs and ponis took {} s", e1.as_secs());
     let avdir = format!("{cbfdir}/{subdir}");

@@ -602,7 +602,7 @@ dependencies = [
 [[package]]
 name = "integrustio"
 version = "0.6.1"
-source = "git+https://git.3lp.cx/dyadkin/integrustio#af3be761d40000d43424b2b4667c9db1dbfd0c6b"
+source = "git+https://git.3lp.cx/dyadkin/integrustio#104b7b9882b725220b7ba8d64f191c2da6265f7d"
 dependencies = [
  "cryiorust",
  "itertools",
@@ -764,6 +764,7 @@ dependencies = [
  "cryiorust",
  "glob",
  "integrustio",
+ "rayon",
 ]
 
 [[package]]
