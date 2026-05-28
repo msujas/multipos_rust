@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use clap::{Parser};
 
 /// program for processing X-ray scattering from multiple detector positions

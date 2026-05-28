@@ -1,0 +1,34 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+    
+        {
+            "name": "Debug executable 'multipos_rust'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "run",
+                    "--bin=multipos_rust"
+                ]
+            },
+            "args": ["--tthmin","0.75","--tthmax","68", "--tthbins","5000","--cbfdir", "D:\\beamlineData\\April2026\\multipositions3\\Si", "--ponidir", 
+            "D:\\beamlineData\\April2026\\multipositions3\\Si\\poni"]
+        },
+        {
+            "name": "Debug unit tests in executable 'multipos_rust'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--bin=multipos_rust"
+                ]
+            }
+        }
+    ]
+}

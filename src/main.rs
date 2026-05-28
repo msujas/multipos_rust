@@ -24,7 +24,7 @@ fn main() {
     let subdir = ap.cakesubdir;
     let maskfilestr = ap.maskfile;
     let tmp:String;
-    let maskfile = match maskfilestr {
+    let maskfile: Option<&Path> = match maskfilestr {
         None => None,
         Some(s) => {tmp = s;
                         Some(Path::new(&tmp))},

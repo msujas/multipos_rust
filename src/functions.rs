@@ -1,8 +1,8 @@
-use cryiorust::{cbf::Cbf, edf, frame::{AnyFrame::Edf, Array, Frame}, poni::{DetectorConfig, Poni}};
+use cryiorust::{cbf::Cbf, edf, frame::{ Array, Frame, HeaderEntry::{Float, Number}}, poni::{DetectorConfig, Poni}};
 use integrustio::integrator::{Cake, Integrator};
 use rayon::iter::{IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use core::f64;
-use std::{cmp::Ordering, fmt::format, fs::File, io::{self, Write}, path::{Path, PathBuf}, sync::Arc, vec};
+use std::{cmp::Ordering,  fs::File, io::{self, Write}, path::{Path, PathBuf}, sync::{Arc, mpsc::channel}, vec};
 use glob::glob;
 pub struct ImagePoni{
     pub poni:Poni,
@@ -12,14 +12,19 @@ impl ImagePoni {
     pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>, mask: Option<&Array>) -> ImagePoni{
         let poni = Poni::open(ponifile, dc).unwrap() ;
         let mut cbf = Cbf::open(cbffile).unwrap();
+
+        let flux = match cbf.header().get("# Flux "){
+            Some(Float(f64)) => f64.clone(),
+            _ => panic!("couldn\'t find flux for {cbffile:?}"),
+        };
         if let Some(mask) = mask{
             for (i , m) in cbf.array_mut().data_mut().iter_mut().zip(mask.data().iter()){
+                *i = *i/ flux;
                 if *m > 0. {
                     *i = -1.;
                 }
             }
         }
-        //let dirname = cbffile.parent().unwrap();
         ImagePoni { poni, cbf }
     }
     pub fn integrate(self, tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
@@ -73,7 +78,7 @@ impl MultiFile{
                     let cbffiles = glob(&pattern).unwrap();
                     let mut cbffile: Option<Arc<PathBuf>>;
                     let binding: edf::Edf;
-                    let mut mask: Option<&Array> = match maskfile {
+                    let mask: Option<&Array> = match maskfile {
                         None => None,
                         Some(f) => {binding = edf::Edf::open(f).unwrap();
                                           Some(binding.array())},
@@ -113,25 +118,34 @@ impl MultiFile{
                     MultiFile { ilist,  tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor }
                 }
     pub fn integrate_all(self, cakedir: &String)->Vec<Cake>{
-        let mut cakes :Vec<Cake> = Vec::new(); //vec![Default::default(); self.ilist.len()];
+        //let mut cakes :Vec<Cake> = Vec::new(); //vec![Default::default(); self.ilist.len()];
         
         let mut count = 0;
         println!("integrating images");
+         
+        let (sender,receiver) = channel();
 
+        self.ilist.into_par_iter()
+                .for_each_with(sender, |s,ip| s.send(ip.get_cake(self.tthmin, self.tthmax, 
+                    self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir)).unwrap());
+
+        
+        let cakes: Vec<Cake> = receiver.iter().collect();
+         /* 
+        let mut cakes = Vec::new();
         for ip in self.ilist{
             print!("{count}, ");
             io::stdout().flush().unwrap();
             cakes.push(ip.get_cake(self.tthmin, self.tthmax, self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir));
             count += 1;
         };
-         
+          */
         cakes
     }
 
     pub fn average_cakes(self, medianfilter:f64, cakedir: &String, avdir: &String){
         let cakes = self.integrate_all(cakedir);
         println!("\naveraging cakes");
-        //let mut medianvec: Vec<f64> = Vec::new();
         let c0 = &cakes[0];
         let rpos = &c0.radial_positions;
         let azpos = &c0.azimuthal_positions;
@@ -184,7 +198,7 @@ impl MultiFile{
             sigma[j] = intj.powf(0.5)/div1d[j]; //approximation of error, square root intensity divide by number of values
         }
         let a:Array = Array::with_data(chisize,radsize, avvec);
-        println!("{vec1d:?}");
+        //println!("{vec1d:?}");
         
         let fname1d  = format!("{avdir}/av1d.xy");
         save1d(fname1d, rpos, &vec1d);
