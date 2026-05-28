@@ -1,6 +1,6 @@
-use cryiorust::{cbf::Cbf, edf, frame::{ Array, Frame, HeaderEntry::{Float, Number}}, poni::{DetectorConfig, Poni}};
+use cryiorust::{cbf::Cbf, edf, frame::{ Array, Frame, HeaderEntry::{Float}}, poni::{DetectorConfig, Poni}};
 use integrustio::integrator::{Cake, Integrator};
-use rayon::iter::{IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use core::f64;
 use std::{cmp::Ordering,  fs::File, io::{self, Write}, path::{Path, PathBuf}, sync::{Arc, mpsc::channel}, vec};
 use glob::glob;
@@ -120,26 +120,19 @@ impl MultiFile{
     pub fn integrate_all(self, cakedir: &String)->Vec<Cake>{
         //let mut cakes :Vec<Cake> = Vec::new(); //vec![Default::default(); self.ilist.len()];
         
-        let mut count = 0;
         println!("integrating images");
          
         let (sender,receiver) = channel();
 
         self.ilist.into_par_iter()
-                .for_each_with(sender, |s,ip| s.send(ip.get_cake(self.tthmin, self.tthmax, 
-                    self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir)).unwrap());
-
-        
-        let cakes: Vec<Cake> = receiver.iter().collect();
-         /* 
-        let mut cakes = Vec::new();
-        for ip in self.ilist{
-            print!("{count}, ");
+                .enumerate()
+                .for_each_with(sender, |s,(i,ip )|{ 
+            print!("{i}, ");
             io::stdout().flush().unwrap();
-            cakes.push(ip.get_cake(self.tthmin, self.tthmax, self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir));
-            count += 1;
-        };
-          */
+            s.send(ip.get_cake(self.tthmin, self.tthmax, 
+                    self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir)).unwrap()});
+
+        let cakes: Vec<Cake> = receiver.iter().collect();
         cakes
     }
 
