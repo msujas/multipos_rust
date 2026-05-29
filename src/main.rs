@@ -43,6 +43,7 @@ fn main() {
     let e1 = now.elapsed();
     println!("loading cbfs and ponis took {} s", e1.as_secs());
     let avdir = format!("{cbfdir}/{subdir}");
+    let _ = create_dir(&avdir);
     mf.average_cakes(4., &cakedir, &avdir, cakemaskfile);
     let elapsed =  now.elapsed();
     println!("");
