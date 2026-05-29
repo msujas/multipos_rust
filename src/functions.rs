@@ -1,9 +1,10 @@
-use cryiorust::{cbf::Cbf, edf, frame::{ Array, Frame, HeaderEntry::{Float}}, poni::{DetectorConfig, Poni}};
+use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, HeaderEntry::Float}, poni::{DetectorConfig, Poni}};
 use integrustio::integrator::{Cake, Integrator};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use core::f64;
-use std::{cmp::Ordering,  fs::File, io::{self, Write}, path::{Path, PathBuf}, sync::{Arc, mpsc::channel}, vec};
+use std::{cmp::Ordering,  fs::File, io::{self, Write}, path::{Path, PathBuf}, sync::{Arc}, vec};
 use glob::glob;
+
 pub struct ImagePoni{
     pub poni:Poni,
     pub cbf:Cbf,
@@ -66,7 +67,8 @@ pub(crate) struct MultiFile{
     chimin: f64,
     chimax: f64,
     chibins: usize,
-    pfactor:f64
+    pfactor:f64,
+
 }
 
 impl MultiFile{
@@ -83,7 +85,7 @@ impl MultiFile{
                         Some(f) => {binding = edf::Edf::open(f).unwrap();
                                           Some(binding.array())},
                     };
-                    
+     
                     let mut ilist:Vec<ImagePoni> = Vec::new();
                     for fresult in cbffiles{
                         cbffile = Some(Arc::new(fresult.unwrap()));
@@ -121,22 +123,20 @@ impl MultiFile{
         //let mut cakes :Vec<Cake> = Vec::new(); //vec![Default::default(); self.ilist.len()];
         
         println!("integrating images");
-         
-        let (sender,receiver) = channel();
 
-        self.ilist.into_par_iter()
-                .enumerate()
-                .for_each_with(sender, |s,(i,ip )|{ 
+        let cakes: Vec<Cake> = self.ilist.into_par_iter()
+        .enumerate()
+        .map(|(i,ip)|{
             print!("{i}, ");
             io::stdout().flush().unwrap();
-            s.send(ip.get_cake(self.tthmin, self.tthmax, 
-                    self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir)).unwrap()});
-
-        let cakes: Vec<Cake> = receiver.iter().collect();
+            ip.get_cake(self.tthmin, self.tthmax, 
+                    self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir)
+        }).collect();
+     
         cakes
     }
 
-    pub fn average_cakes(self, medianfilter:f64, cakedir: &String, avdir: &String){
+    pub fn average_cakes(self, medianfilter:f64, cakedir: &String, avdir: &String, cakemaskfile: Option<String>){
         let cakes = self.integrate_all(cakedir);
         println!("\naveraging cakes");
         let c0 = &cakes[0];
@@ -153,12 +153,26 @@ impl MultiFile{
         println!("dim1: {chisize}");
         println!("dim2: {radsize}");
         println!("array size {datalen}");
+        let tmp :Edf;
+        let cakemask = match cakemaskfile{
+            None => None,
+            Some(s) =>{ tmp = Edf::open(s).unwrap();
+                if tmp.array().data().len() != datalen{
+                    println!("mismatch in cake mask and data length. Ignoring mask");
+                    return 
+                }
+                Some(tmp.array())}
+        };
         for i in 0..datalen{
             let index1d = i%radsize;
             let mut atemp: Vec<f64> = Vec::new();
             for c in &cakes{
                 let item = c.cake.data()[i];
                 if item > 0.{
+                    if let Some(cakemask) = cakemask {
+                        if cakemask.data()[i] > 0.{
+                        continue;}
+                    }
                     atemp.push(item);
                 }
             }

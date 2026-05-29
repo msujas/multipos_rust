@@ -31,11 +31,16 @@ pub(crate) struct Params{
     /// poni directory
     #[arg(short='o', long)]
     pub ponidir: String,
+    /// save individual cakes or not
     #[arg(short, long)]
     pub savecakes: bool,
+    /// subdirectory to store cake file
     #[arg(short='u', long, default_value="cakes")]
     pub cakesubdir: String,
+    /// mask file path (optional)
     #[arg(short, long, default_value=None)]
     pub maskfile: Option<String>,
-
+    /// cake mask path (optional)
+    #[arg(short='k', long, default_value=None)]
+    pub cakemaskfile: Option<String>,
 }
