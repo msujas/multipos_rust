@@ -156,12 +156,12 @@ impl MultiFile{
         let tmp :Edf;
         let cakemask = match cakemaskfile{
             None => None,
-            Some(s) =>{ tmp = Edf::open(s).unwrap();
-                if tmp.array().data().len() != datalen{
-                    println!("mismatch in cake mask and data length. Ignoring mask");
-                    return 
-                }
+            Some(s)  if Edf::open(s.clone()).unwrap().array().data().len() == datalen =>{ 
+                tmp = Edf::open(s).unwrap();
                 Some(tmp.array())}
+            _ => {println!("mismatch in cake mask and data length. Ignoring mask");
+                None}
+                
         };
         for i in 0..datalen{
             let index1d = i%radsize;
@@ -207,8 +207,8 @@ impl MultiFile{
         let a:Array = Array::with_data(chisize,radsize, avvec);
         //println!("{vec1d:?}");
         
-        let fname1d  = format!("{avdir}/av1d.xy");
-        save1d(fname1d, rpos, &vec1d);
+        let fname1d  = format!("{avdir}/av1d.xye");
+        save1d(fname1d, rpos, &vec1d, &sigma);
         let mut newcake:Cake = Default::default(); 
         newcake.cake = a; 
         newcake.radial_positions = rpos.clone();
@@ -223,10 +223,17 @@ impl MultiFile{
     }
 }
 
-fn save1d(fname:String, tthrange: &Vec<f64>, vec1d: &Vec<f64>){
+fn save1d(fname:String, tthrange: &Vec<f64>, vec1d: &Vec<f64>, sigma : &Vec<f64>){
     let mut outstring = String::new();
-    for (x,y) in tthrange.iter().zip(vec1d.iter()){
-        outstring = outstring + &String::from(format!("{x:.6} {y:.6}\n"));
+    //for (x,y ) in  tthrange.iter().zip(vec1d.iter()){
+    let mut x:f64;
+    let mut y:f64;
+    let mut e:f64;
+    for i in 0..tthrange.len(){
+        x = tthrange[i];
+        y=vec1d[i];
+        e=sigma[i];
+        outstring = outstring + &String::from(format!("{x:.6} {y:.6} {e:.6}\n"));
     }
     let mut file = File::create(fname).unwrap();
     file.write(outstring.as_bytes()).unwrap();    
