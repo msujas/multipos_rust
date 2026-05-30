@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::{fs::create_dir, time::Instant};
 use clap::Parser;
-use multipos_rust::functions::MultiFile;
+use crate::functions::MultiFile;
 use crate::params::Params;
 
 mod functions;
