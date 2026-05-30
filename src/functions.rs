@@ -2,7 +2,7 @@ use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, HeaderEntry::
 use integrustio::integrator::{Cake, Integrator};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use core::f64;
-use std::{cmp::Ordering,  fs::File, io::{self, Write}, path::{Path, PathBuf}, sync::{Arc}, vec};
+use std::{cmp::Ordering,  fs::{File, create_dir}, io::{self, Write}, path::{Path, PathBuf}, sync::Arc, vec};
 use glob::glob;
 
 pub struct ImagePoni{
@@ -144,7 +144,8 @@ impl MultiFile{
         let azpos = &c0.azimuthal_positions;
         let chisize = c0.cake.dim1();
         let radsize = c0.cake.dim2();
-        
+        let _ = create_dir(&avdir);
+
         let mut avvec : Vec<f64> = vec![0.;c0.cake.len()];
         let mut vec1d : Vec<f64> = vec![0.; radsize];
         let mut div1d : Vec<f64> = vec![0.; radsize];
