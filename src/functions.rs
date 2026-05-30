@@ -59,7 +59,7 @@ impl ImagePoni {
 }
 
 
-pub(crate) struct MultiFile{
+pub struct MultiFile{
     ilist :Vec<ImagePoni>,
     tthmin: f64,
     tthmax: f64,
