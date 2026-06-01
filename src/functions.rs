@@ -154,6 +154,7 @@ impl MultiFile{
         println!("dim1: {chisize}");
         println!("dim2: {radsize}");
         println!("array size {datalen}");
+
         let tmp :Edf;
         let cakemask = match cakemaskfile{
             None => None,
@@ -161,9 +162,9 @@ impl MultiFile{
                 tmp = Edf::open(s).unwrap();
                 Some(tmp.array())}
             _ => {println!("mismatch in cake mask and data length. Ignoring mask");
-                None}
-                
+                None}  
         };
+
         for i in 0..datalen{
             let index1d = i%radsize;
             let mut atemp: Vec<f64> = Vec::new();
@@ -208,8 +209,8 @@ impl MultiFile{
         let a:Array = Array::with_data(chisize,radsize, avvec);
         //println!("{vec1d:?}");
         
-        let fname1d  = format!("{avdir}/av1d.xye");
-        save1d(fname1d, rpos, &vec1d, &sigma);
+        let fname1d  = format!("{avdir}/av1d_2.xye");
+        save1d(fname1d, rpos, &vec1d, Some(&sigma));
         let mut newcake:Cake = Default::default(); 
         newcake.cake = a; 
         newcake.radial_positions = rpos.clone();
@@ -220,22 +221,81 @@ impl MultiFile{
         let fnameav = format!("{avdir}/avcake.edf");
         newcake.store(fnameav, None).unwrap();
         
-        
+        let av1d_alt = cakeav(&cakes, cakemask);
+        let fname1d_alt = format!("{avdir}/av1d.xy");
+        save1d(fname1d_alt, rpos, &av1d_alt, None);
     }
 }
 
-fn save1d(fname:String, tthrange: &Vec<f64>, vec1d: &Vec<f64>, sigma : &Vec<f64>){
+
+
+fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<&Array>)-> Vec<f64>{
+
+    let c0 = &cakelist[0];
+    let chisize = c0.cake.dim1();
+    let tthsize= c0.cake.dim2();
+    let mut av1d : Vec<f64> = vec![0.; tthsize];
+    let mut divvec: Vec<f64> = vec![0.;tthsize];
+    let mut index: usize;
+
+    for c in cakelist{
+        for i in 0..tthsize{
+            let mut vtemp : Vec<f64> = Vec::new();
+            for j in 0..chisize{
+                index = i + j*tthsize;
+                let value = c.cake.data()[index];
+                if c.cake.data()[index] > 0.{
+                    if let Some(cakemask)=cakemask{
+                        if cakemask.data()[index] > 0.1{
+                            continue;
+                        }
+                    }
+                    vtemp.push(value);
+                }
+            }
+            let med = getmedian(&vtemp);
+            let mut intensity = 0.;
+            let mut div = 0.;
+            for item in vtemp{
+                if (item < med*4.) & (item > med/4.){
+                    intensity += item;
+                    div += 1.;
+                }
+            }
+            if div > 0. {
+                av1d[i] += intensity/div;
+                divvec[i] += 1.;
+            }    
+        }
+    }
+    for (x, d) in av1d.iter_mut().zip(divvec.iter_mut()){
+        if *d > 0. {
+        *x = *x/ *d;
+        }
+    }
+av1d
+}
+
+fn save1d(fname:String, tthrange: &Vec<f64>, vec1d: &Vec<f64>, sigma : Option<&Vec<f64>>){
     let mut outstring = String::new();
     //for (x,y ) in  tthrange.iter().zip(vec1d.iter()){
     let mut x:f64;
     let mut y:f64;
     let mut e:f64;
+    let dosig:bool = match sigma  {
+        None => false,
+        Some(_s) => true
+    };
     for i in 0..tthrange.len(){
         x = tthrange[i];
         y=vec1d[i];
-        e=sigma[i];
-        outstring = outstring + &String::from(format!("{x:.6} {y:.6} {e:.6}\n"));
-    }
+        outstring = outstring + &String::from(format!("{x:.6} {y:.6}"));
+        if dosig{
+            e = sigma.unwrap()[i];
+            outstring = outstring + &String::from(format!(" {e:.6}"));
+            }
+        outstring = outstring + &String::from("\n");
+        }
     let mut file = File::create(fname).unwrap();
     file.write(outstring.as_bytes()).unwrap();    
 }
