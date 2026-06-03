@@ -3,7 +3,7 @@ use integrustio::integrator::{Cake, Integrator};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use core::f64;
 use std::{cmp::Ordering,  fs::{File, create_dir}, io::{self, Write}, path::{Path, PathBuf}, sync::Arc, vec};
-use glob::glob;
+use glob::{ glob};
 
 pub struct ImagePoni{
     pub poni:Poni,
@@ -74,7 +74,7 @@ pub struct MultiFile{
 impl MultiFile{
 
     pub fn build(cbfdir:&String, ponidir: &String, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
-                chibins:usize, pfactor:f64, maskfile: Option<&Path>) -> MultiFile {
+                chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>) -> MultiFile {
                     let mut dc = None;
                     let pattern = format!("{cbfdir}/*.cbf");
                     let cbffiles = glob(&pattern).unwrap();
@@ -85,14 +85,36 @@ impl MultiFile{
                         Some(f) => {binding = edf::Edf::open(f).unwrap();
                                           Some(binding.array())},
                     };
-     
+                    let mut usedmask : Option<&Array> = mask.clone();
                     let mut ilist:Vec<ImagePoni> = Vec::new();
+                    let mut mbinding:Edf;
                     for fresult in cbffiles{
                         cbffile = Some(Arc::new(fresult.unwrap()));
                         let cbfclone = cbffile.clone();
                         
                         let basename = cbfclone.unwrap().file_name().unwrap().to_str().unwrap().replace(".cbf", "");
                         let ponifiles = glob(&format!("{ponidir}/*.poni")).unwrap();
+                        if let Some(md) = &maskdir{
+                            let maskfiles = glob(&format!("{md}/*.edf")).unwrap();
+                            for mresult in maskfiles{
+                                let m = mresult.unwrap();
+                                let mut breakloop:bool = false;
+                                let mbase = m.file_name().unwrap().to_str().unwrap().replace(".edf", "");
+                                
+                                usedmask = match basename.find(&mbase){
+                                    None => mask,
+                                    Some(_s) => {mbinding = Edf::open(m).unwrap();
+                                    breakloop=true;
+                                    Some(mbinding.array())},
+                                };
+                                if breakloop{
+                                    println!("{basename}.cbf using mask {mbase}.edf");
+                                    break;
+                                }
+                                
+                                
+                            }
+                        }
                         for presult in ponifiles{
                             let ponifile = presult.unwrap();
                             let pbasefile = ponifile.file_name().unwrap().to_str().unwrap().replace(".poni","");
@@ -101,10 +123,10 @@ impl MultiFile{
                                 
                                 println!("{:?}, {:?}", cbffile.clone().unwrap(),ponifile);
                                 let ip = match dc{
-                                    None => {let ip = ImagePoni::build(&ponifile,&cbffile.clone().unwrap(), None, mask);
+                                    None => {let ip = ImagePoni::build(&ponifile,&cbffile.clone().unwrap(), None, usedmask);
                                     dc = ip.poni.detector_config.clone();ip},
                                     Some(ref dc) => ImagePoni::build(&ponifile,&cbffile.clone().unwrap(),
-                                     Some(dc.clone()), mask),
+                                     Some(dc.clone()), usedmask),
                                 };
                                 ilist.push(ip);
                                 break;
@@ -221,7 +243,7 @@ impl MultiFile{
         let fnameav = format!("{avdir}/avcake.edf");
         newcake.store(fnameav, None).unwrap();
         
-        let av1d_alt = cakeav(&cakes, cakemask);
+        let av1d_alt = cakeav(&cakes, cakemask, medianfilter);
         let fname1d_alt = format!("{avdir}/av1d.xy");
         save1d(fname1d_alt, rpos, &av1d_alt, None);
     }
@@ -229,7 +251,7 @@ impl MultiFile{
 
 
 
-fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<&Array>)-> Vec<f64>{
+fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<&Array>, medianfilter:f64)-> Vec<f64>{
 
     let c0 = &cakelist[0];
     let chisize = c0.cake.dim1();
@@ -257,7 +279,7 @@ fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<&Array>)-> Vec<f64>{
             let mut intensity = 0.;
             let mut div = 0.;
             for item in vtemp{
-                if (item < med*4.) & (item > med/4.){
+                if (item < med*medianfilter) & (item > med/medianfilter){
                     intensity += item;
                     div += 1.;
                 }

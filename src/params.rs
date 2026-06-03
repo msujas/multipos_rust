@@ -43,4 +43,7 @@ pub(crate) struct Params{
     /// cake mask path (optional)
     #[arg(short='k', long, default_value=None)]
     pub cakemaskfile: Option<String>,
+    #[arg(long, default_value=None)]
+    pub maskdir: Option<String>,
+
 }

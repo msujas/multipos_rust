@@ -24,6 +24,7 @@ fn main() {
     let subdir = ap.cakesubdir;
     let maskfilestr = ap.maskfile;
     let cakemaskfile = ap.cakemaskfile;
+    let maskdir = ap.maskdir;
 
     let tmp:String;
     let maskfile: Option<&Path> = match maskfilestr {
@@ -38,7 +39,7 @@ fn main() {
         cakedir.push_str(&format!("{cbfdir}/{subdir}"));
         let _ = create_dir(&cakedir);
     }
-    let mf = MultiFile::build(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile);
+    let mf = MultiFile::build(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile,maskdir);
     let e1 = now.elapsed();
     println!("loading cbfs and ponis took {} s", e1.as_secs());
     let avdir = format!("{cbfdir}/{subdir}");
