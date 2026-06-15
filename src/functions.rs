@@ -1,8 +1,9 @@
 use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, HeaderEntry::Float}, poni::{DetectorConfig, Poni}};
+use fluosubtraction_rust::functions::fluosub_curvefit;
 use integrustio::integrator::{Cake, Integrator};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use core::f64;
-use std::{cmp::Ordering,  fs::{File, create_dir}, io::{self, Write}, path::{Path, PathBuf}, sync::Arc, vec};
+use std::{cmp::Ordering, fs::{File, create_dir}, io::{self, Write}, path::{Path, PathBuf}, sync::Arc, vec};
 use glob::{ glob};
 
 pub struct ImagePoni{
@@ -158,7 +159,7 @@ impl MultiFile{
         cakes
     }
 
-    pub fn average_cakes(self, medianfilter:f64, cakedir: &String, avdir: &String, cakemaskfile: Option<String>){
+    pub fn average_cakes(self, medianfilter:f64, cakedir: &String, avdir: &String, cakemaskfile: Option<String>)->Cake{
         let cakes = self.integrate_all(cakedir);
         println!("\naveraging cakes");
         let c0 = &cakes[0];
@@ -246,6 +247,25 @@ impl MultiFile{
         let av1d_alt = cakeav(&cakes, cakemask, medianfilter);
         let fname1d_alt = format!("{avdir}/av1d.xy");
         save1d(fname1d_alt, rpos, &av1d_alt, None);
+
+        newcake
+    }
+
+    pub fn integrate_fluosub(self, medianfilter:f64, cakedir: &String, avdir: &String, cakemaskfile: Option<String>, 
+                        fluo_k0:f64, tthindex:usize)->Cake{
+        let pfactor = self.pfactor;
+        let cake = self.average_cakes(medianfilter, cakedir, avdir, cakemaskfile);
+        let newcake = fluosub_curvefit(fluo_k0, cake, pfactor, tthindex);
+        let fsdir = format!("{avdir}fluoSub");
+        let _ = create_dir(&fsdir);
+        let fname = format!("{}/avcake.edf", &fsdir);
+        let fname1d = format!("{}/avcake.xye", &fsdir);
+        newcake.store(fname, None).unwrap();
+        let av1d = &newcake.radial.intensity;
+        let tth = &newcake.radial.positions.to_vec();
+        let sigma = &newcake.radial.sigma;
+        save1d(fname1d, tth, av1d, Some(sigma));
+        newcake
     }
 }
 
