@@ -25,6 +25,8 @@ fn main() {
     let maskfilestr = ap.maskfile;
     let cakemaskfile = ap.cakemaskfile;
     let maskdir = ap.maskdir;
+    let fluosub = ap.fluosub;
+    let fluok0 = ap.fluok0;
 
     let tmp:String;
     let maskfile: Option<&Path> = match maskfilestr {
@@ -43,7 +45,12 @@ fn main() {
     let e1 = now.elapsed();
     println!("loading cbfs and ponis took {} s", e1.as_secs());
     let avdir = format!("{cbfdir}/{subdir}");
-    mf.average_cakes(4., &cakedir, &avdir, cakemaskfile);
+    if fluosub{
+        mf.integrate_fluosub(4., &cakedir, &avdir, cakemaskfile, fluok0, 4800);
+    }
+    else {
+        mf.average_cakes(4., &cakedir, &avdir, cakemaskfile);
+    };
     let elapsed =  now.elapsed();
     println!("");
     println!("program took {} s", elapsed.as_secs());

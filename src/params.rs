@@ -45,5 +45,11 @@ pub(crate) struct Params{
     pub cakemaskfile: Option<String>,
     #[arg(long, default_value=None)]
     pub maskdir: Option<String>,
+    /// do fluo subtraction or not
+    #[arg(short, long, default_value=None)]
+    pub fluosub: bool,
+    /// fluok starting value
+    #[arg(long, default_value_t=1.)]
+    pub fluok0: f64,
 
 }
