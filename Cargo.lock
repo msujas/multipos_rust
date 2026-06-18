@@ -332,7 +332,7 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 [[package]]
 name = "cryiorust"
 version = "0.6.0"
-source = "git+https://git.3lp.cx/dyadkin/cryiorust#c1379d38524cdc4b18f95dced134389b36a834fd"
+source = "git+https://git.3lp.cx/dyadkin/cryiorust#e1c38203000cd40da5b9524c4c76b4cb97476c94"
 dependencies = [
  "askama",
  "base64",
@@ -421,7 +421,7 @@ dependencies = [
 [[package]]
 name = "fluosubtraction_rust"
 version = "0.1.0"
-source = "git+c:/Users/kenneth1a/Documents/git/fluosubtraction_rust#e6d67eeed1d389c2a2648566bd7eb8621d35d326"
+source = "git+https://github.com/msujas/fluosubtraction_rust#97cbe90db660c290337b2b3df72bd9ca53b65ef0"
 dependencies = [
  "cryiorust",
  "integrustio",
@@ -490,7 +490,7 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 [[package]]
 name = "hdf5-bitshuffle"
 version = "0.9.1"
-source = "git+https://git.3lp.cx/dyadkin/cryiorust#c1379d38524cdc4b18f95dced134389b36a834fd"
+source = "git+https://git.3lp.cx/dyadkin/cryiorust#e1c38203000cd40da5b9524c4c76b4cb97476c94"
 dependencies = [
  "cc",
  "hdf5-metno-src",
