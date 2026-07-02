@@ -2,3 +2,4 @@
 *.bat
 src/poniInterpolator.rs
 .vscode
+path.edf

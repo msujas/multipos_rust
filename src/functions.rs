@@ -1,9 +1,9 @@
-use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, HeaderEntry::Float}, poni::{DetectorConfig, Poni}};
+use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, Header, HeaderEntry::{self, Float}}, poni::{DetectorConfig, Poni}};
 use fluosubtraction_rust::functions::fluosub_curvefit;
-use integrustio::integrator::{Cake, Integrator};
+use integrustio::{ geometry::{IntoGeometry, Units}, integrator::{Cake, Integrator, KEY_BUBBLE_MADE}};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use core::f64;
-use std::{cmp::Ordering, fs::{File, create_dir}, io::{self, Write}, path::{Path, PathBuf}, sync::Arc, vec};
+use std::{borrow::Cow, cmp::Ordering, f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter, Write}, path::{Path, PathBuf}, sync::Arc, vec};
 use glob::{ glob};
 
 pub struct ImagePoni{
@@ -267,6 +267,97 @@ impl MultiFile{
         save1d(fname1d, tth, av1d, Some(sigma));
         newcake
     }
+
+    pub fn calculateflatfield(&self){
+        let tthmin = self.tthmin;
+        let tthmax = self.tthmax;
+        let tthbins = self.tthbins;
+        let chimin = self.chimin;
+        let chimax = self.chimax;
+        let tthspacing = (tthmax - tthmin)/(tthbins as f64 - 1.);
+        let mut tthrange : Vec<f64> = Vec::new();
+        for i in 0..tthbins{
+            tthrange.push(tthmin + tthspacing * i as f64);
+        };
+        let mut tthvalues: Vec<f64> = vec![0.; tthbins];
+        let mut tthdiv: Vec<f64> = vec![0.; tthbins];
+        let mut tthindexvec : Vec<Vec<i32>> = Vec::new();
+        println!("calculating 1d pattern");
+        for (n,ip) in self.ilist.iter().enumerate(){
+            tthindexvec.push(Vec::new());
+            let geo = ip.poni.geometry(&Units::TwoTheta, self.pfactor, 0., 0.);
+            let deg = 180./PI;
+            let data = ip.cbf.array().data();
+            let dim1 = ip.cbf.dim1();
+            
+            //let dim2 = ip.cbf.dim2();
+            print!("{n}, ");
+            io::stdout().flush().unwrap();
+            for (i,pix) in data.iter().enumerate(){
+                let y = i % dim1;
+                let x = i / dim1;
+                //let (tth, chi) = geo.compute_tth_chi(y as f64, x as f64);
+                let pd = geo.compute_pixel(y, x);
+                let pol = pd.polar;
+                let sa = pd.sa;
+                let tth = pd.tth;
+                let chi = pd.chi;
+                let tthdeg = tth*deg;
+                let chideg = chi*deg;
+                if (tthdeg < tthmin - tthspacing/2.) | (tthdeg > tthmax + tthspacing/2.) | (chideg < chimin) | (chideg > chimax) | (*pix <= 0.){
+                    tthindexvec[n].push(-1);
+                    continue;
+                }
+                let tthindex = closestindex(&tthrange, tth);
+                tthvalues[tthindex] += *pix/(pol * sa);
+                tthdiv[tthindex] += 1.;
+                tthindexvec[n].push(tthindex as i32);
+            }
+        }
+        let mut tthav: Vec<f64> = Vec::new();
+        for (val, div) in tthvalues.iter().zip(tthdiv.iter()){
+            tthav.push(val/div);
+        }
+        println!("\npattern calculated");
+        let cbfsize = self.ilist[0].cbf.array().data().len();
+        let dim1 = self.ilist[0].cbf.dim1();
+        let dim2 = self.ilist[0].cbf.dim2();
+
+        let mut gainsum : Vec<f64> = vec![0.;cbfsize];
+        let mut gaindiv : Vec<f64> = vec![0.;cbfsize];
+        for (i, (ip, tthiv)) in self.ilist.iter().zip(tthindexvec.iter()).enumerate(){
+            let data = ip.cbf.array().data();
+            for (pix, tthi) in data.iter().zip(tthiv){
+                if *tthi < 0 {
+                    continue;
+                }
+                let gain = pix / tthav[*tthi as usize];
+                gainsum[i] += gain;
+                gaindiv[i] += 1.;
+            }
+        }
+        let mut flatfield : Vec<f64> = Vec::new();
+        for (g,d) in gainsum.iter().zip(gaindiv.iter()){
+            if *d <= 0. {
+                flatfield.push(-1.);
+                continue;
+            }
+            let value = g/d;
+            if (value < 0.7) | (value > 1.5){
+                flatfield.push(-1.);
+                continue;
+            }
+            flatfield.push(value);
+            
+        }
+        let mut header = Header::new();
+        header.insert(Cow::Borrowed(KEY_BUBBLE_MADE), HeaderEntry::Number(1)); //tells bubble not to integrate
+        let flatfieldarray = Array::with_data(dim1, dim2, flatfield);
+        let mut writer = BufWriter::new(File::create("./path.edf").unwrap());
+        Edf::save_array(&flatfieldarray, &mut header, &mut writer, edf::DataType::F32).unwrap();
+
+        //flatfieldim.array = flatfieldarray;       
+    }
 }
 
 
@@ -367,7 +458,18 @@ fn cmpf64(a:&f64,b:&f64)->Ordering{
     return Ordering::Equal;
     }
     
-
+fn closestindex(avec: &Vec<f64>, value: f64)->usize{
+    let mut minindex: usize = 0;
+    let mut mindiffsq: f64 = (value - avec[0]).powi(2);
+    for (i,v) in avec.iter().enumerate(){
+        let diffsq = (value-v).powi(2);
+        if diffsq < mindiffsq{
+            mindiffsq = diffsq;
+            minindex = i;
+        }
+    }
+    minindex
+}
 
 #[cfg(test)]
 mod tests{
@@ -389,4 +491,5 @@ mod tests{
         assert_eq!(b1, true);
         assert_eq!(b2, true);
     }
+
 }

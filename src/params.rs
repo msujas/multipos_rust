@@ -43,6 +43,7 @@ pub(crate) struct Params{
     /// cake mask path (optional)
     #[arg(short='k', long, default_value=None)]
     pub cakemaskfile: Option<String>,
+    /// directory for individual masks (matched with y and z positions)
     #[arg(long, default_value=None)]
     pub maskdir: Option<String>,
     /// do fluo subtraction or not
@@ -52,4 +53,40 @@ pub(crate) struct Params{
     #[arg(long, default_value_t=1.)]
     pub fluok0: f64,
 
+}
+
+/// program for calculating flat field given cbfs from multiple detector positions
+#[derive(Parser,Debug)]
+#[command(version, about, long_about = None)]
+pub(crate) struct ParamsFF{
+    /// minimum 2theta
+    #[arg(short, long)]
+    pub tthmin : f64,
+    /// maximum 2theta
+    #[arg(short='x', long)]
+    pub tthmax : f64,
+    /// number of 2theta bins
+    #[arg(short='b', long, default_value_t = 5000)]
+    pub tthbins : usize,
+    /// minimum chi
+    #[arg(short='c', long, default_value_t = 2.)]
+    pub chimin : f64,
+    /// maximum chi
+    #[arg(short='a', long, default_value_t= 358.)]
+    pub chimax : f64,
+    /// polarization factor
+    #[arg(short, long, default_value_t = 0.85)]
+    pub pfactor: f64,
+    /// cbf directory
+    #[arg(short='d', long, default_value  = ".")]
+    pub cbfdir: String,
+    /// poni directory - one for each cbf
+    #[arg(short='o', long)]
+    pub ponidir: String,
+    /// mask file path (optional)
+    #[arg(short, long, default_value=None)]
+    pub maskfile: Option<String>,
+    /// directory for individual masks (matched with y and z positions)
+    #[arg(long, default_value=None)]
+    pub maskdir: Option<String>,
 }
