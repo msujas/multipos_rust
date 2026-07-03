@@ -1,11 +1,9 @@
 use std::path::Path;
 use std::{fs::create_dir, time::Instant};
 use clap::Parser;
-use crate::functions::MultiFile;
-use crate::params::Params;
+use multiposrust::MultiFile;
+use multiposrust::params::Params;
 
-mod functions;
-mod params;
 
 fn main() {
     let now = Instant::now();

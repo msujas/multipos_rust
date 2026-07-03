@@ -3,7 +3,7 @@ use clap::{Parser};
 /// program for processing X-ray scattering from multiple detector positions
 #[derive(Parser,Debug)]
 #[command(version, about, long_about = None)]
-pub(crate) struct Params{
+pub struct Params{
     /// minimum 2theta
     #[arg(short, long)]
     pub tthmin : f64,
@@ -58,7 +58,7 @@ pub(crate) struct Params{
 /// program for calculating flat field given cbfs from multiple detector positions
 #[derive(Parser,Debug)]
 #[command(version, about, long_about = None)]
-pub(crate) struct ParamsFF{
+pub struct ParamsFF{
     /// minimum 2theta
     #[arg(short, long)]
     pub tthmin : f64,

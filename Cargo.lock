@@ -419,6 +419,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "flatfieldcalculator"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "multiposrust",
+]
+
+[[package]]
 name = "fluosubtraction_rust"
 version = "0.1.0"
 source = "git+https://github.com/msujas/fluosubtraction_rust#97cbe90db660c290337b2b3df72bd9ca53b65ef0"
@@ -766,7 +774,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "multipos_rust"
+name = "multiposintegrator"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "multiposrust",
+]
+
+[[package]]
+name = "multiposrust"
 version = "0.1.0"
 dependencies = [
  "clap",

@@ -1,11 +1,9 @@
 use std::{path::Path, time::Instant};
-
-use crate::params::ParamsFF;
 use clap::Parser;
-use multipos_rust::functions::MultiFile;
+use multiposrust::MultiFile;
 
-mod functions;
-mod params;
+use multiposrust::params::ParamsFF;
+
 fn main(){
     let ap = ParamsFF::parse();
     let cbfdir = ap.cbfdir;
