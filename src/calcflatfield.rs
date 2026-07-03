@@ -30,5 +30,5 @@ fn main(){
     let mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile, maskdir);
     mf.calculateflatfield();
     let elapsed = now.elapsed();
-    println!("program took {}", elapsed.as_secs());
+    println!("program took {} s", elapsed.as_secs());
 }

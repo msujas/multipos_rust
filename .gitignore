@@ -3,3 +3,6 @@
 src/poniInterpolator.rs
 .vscode
 path.edf
+flatfield
+test.xy
+*.py

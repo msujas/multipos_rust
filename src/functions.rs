@@ -3,7 +3,7 @@ use fluosubtraction_rust::functions::fluosub_curvefit;
 use integrustio::{ geometry::{IntoGeometry, Units}, integrator::{Cake, Integrator, KEY_BUBBLE_MADE}};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use core::f64;
-use std::{borrow::Cow, cmp::Ordering, f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter, Write}, path::{Path, PathBuf}, sync::Arc, vec};
+use std::{borrow::Cow, cmp::Ordering, f64::consts::PI, fs::{File, create_dir},  io::{self, BufWriter, Write}, path::{Path, PathBuf}, sync::Arc, vec};
 use glob::{ glob};
 
 pub struct ImagePoni{
@@ -282,20 +282,24 @@ impl MultiFile{
         let mut tthvalues: Vec<f64> = vec![0.; tthbins];
         let mut tthdiv: Vec<f64> = vec![0.; tthbins];
         let mut tthindexvec : Vec<Vec<i32>> = Vec::new();
+        let deg = 180./PI;
         println!("calculating 1d pattern");
+        let cbf0 = &self.ilist[0].cbf;
+        let dim1 = cbf0.dim1();
+        let dim2 = cbf0.dim2();
+        let scale = 1e7;
+        println!("dim1: {dim1}, dim2: {dim2}");
         for (n,ip) in self.ilist.iter().enumerate(){
             tthindexvec.push(Vec::new());
             let geo = ip.poni.geometry(&Units::TwoTheta, self.pfactor, 0., 0.);
-            let deg = 180./PI;
-            let data = ip.cbf.array().data();
-            let dim1 = ip.cbf.dim1();
             
-            //let dim2 = ip.cbf.dim2();
+            let data = ip.cbf.array().data();    
+            
             print!("{n}, ");
             io::stdout().flush().unwrap();
             for (i,pix) in data.iter().enumerate(){
-                let y = i % dim1;
-                let x = i / dim1;
+                let y = i / dim2;
+                let x =  i % dim2;
                 //let (tth, chi) = geo.compute_tth_chi(y as f64, x as f64);
                 let pd = geo.compute_pixel(y, x);
                 let pol = pd.polar;
@@ -308,8 +312,9 @@ impl MultiFile{
                     tthindexvec[n].push(-1);
                     continue;
                 }
-                let tthindex = closestindex(&tthrange, tth);
-                tthvalues[tthindex] += *pix/(pol * sa);
+                let tthindex = closestindexordered(&tthrange, tthdeg);
+                
+                tthvalues[tthindex] += *pix * scale/(pol * sa);
                 tthdiv[tthindex] += 1.;
                 tthindexvec[n].push(tthindex as i32);
             }
@@ -318,24 +323,37 @@ impl MultiFile{
         for (val, div) in tthvalues.iter().zip(tthdiv.iter()){
             tthav.push(val/div);
         }
+        save1d(String::from("./test.xy"), &tthrange, &tthav, None);
         println!("\npattern calculated");
+
         let cbfsize = self.ilist[0].cbf.array().data().len();
         let dim1 = self.ilist[0].cbf.dim1();
         let dim2 = self.ilist[0].cbf.dim2();
 
         let mut gainsum : Vec<f64> = vec![0.;cbfsize];
         let mut gaindiv : Vec<f64> = vec![0.;cbfsize];
-        for (i, (ip, tthiv)) in self.ilist.iter().zip(tthindexvec.iter()).enumerate(){
+
+        //println!("{tthindexvec:?}");
+        for (ip, tthiv) in self.ilist.iter().zip(tthindexvec.iter()){
+            let geo = ip.poni.geometry(&Units::TwoTheta, self.pfactor, 0., 0.);
             let data = ip.cbf.array().data();
-            for (pix, tthi) in data.iter().zip(tthiv){
+            for (i, (pix, tthi)) in data.iter().zip(tthiv).enumerate(){
+                let y = i / dim2;
+                let x = i % dim2;
+                //let (tth, chi) = geo.compute_tth_chi(y as f64, x as f64);
+                let pd = geo.compute_pixel(y, x);
+                let pol = pd.polar;
+                let sa = pd.sa;
                 if *tthi < 0 {
                     continue;
                 }
-                let gain = pix / tthav[*tthi as usize];
+
+                let gain = (pix * scale/(pol * sa)) / tthav[*tthi as usize];
                 gainsum[i] += gain;
                 gaindiv[i] += 1.;
             }
         }
+
         let mut flatfield : Vec<f64> = Vec::new();
         for (g,d) in gainsum.iter().zip(gaindiv.iter()){
             if *d <= 0. {
@@ -343,12 +361,14 @@ impl MultiFile{
                 continue;
             }
             let value = g/d;
+            
             if (value < 0.7) | (value > 1.5){
                 flatfield.push(-1.);
                 continue;
             }
-            flatfield.push(value);
             
+            flatfield.push(value);
+             
         }
         let mut header = Header::new();
         header.insert(Cow::Borrowed(KEY_BUBBLE_MADE), HeaderEntry::Number(1)); //tells bubble not to integrate
@@ -471,6 +491,39 @@ fn closestindex(avec: &Vec<f64>, value: f64)->usize{
     minindex
 }
 
+fn closestindexordered(avec: &Vec<f64>, value: f64)->usize{
+    let size = avec.len();
+    let mut i0:usize = 0;
+    let mut i = size/2;
+    let mut iend = size-1;
+
+    let mut midvalue = avec[i];
+    loop {
+        if value < midvalue{
+            iend = i;
+            i = (i + i0)/2;
+            
+        }
+        else {
+            i0 = i;
+            i = (iend + i )/2;
+        }
+        midvalue = avec[i];
+        if (iend as i32 - i0 as i32) <= 1{
+            let de = (value - avec[iend]).powi(2);
+            let d0 = (value - avec[i0]).powi(2);
+            if d0 < de{
+                i = i0;
+            }
+            else {
+                i = iend;
+            }
+            break;
+        }
+    };
+    i
+}
+
 #[cfg(test)]
 mod tests{
     use super::*;
@@ -491,5 +544,34 @@ mod tests{
         assert_eq!(b1, true);
         assert_eq!(b2, true);
     }
+
+    #[test]
+    fn indextest(){
+        let i = closestindex(&vec![1., 3., 7., 5.2], 5.3);
+        assert_eq!(i,3)
+    }
+
+    #[test]
+    fn indextest2(){
+        let mut avec:Vec<f64> = Vec::new();
+        let space = 0.5;
+        let start = 0.5;
+        for n in 0..1000{
+            avec.push(start + space*(n as f64));
+        };
+        let i = closestindexordered(&avec, 426.);
+        println!("{}",avec[851]);
+        println!("{}",avec[i]);
+        println!("{i}");
+        assert_eq!(i, 851);
+        let i2 = closestindexordered(&avec, -5.);
+        assert_eq!(i2,0);
+
+        let i3 = closestindexordered(&avec, 52.3);
+        println!("{i3}, {}", avec[i3]);
+        assert_eq!(i3,104);
+        assert!((avec[i3] - 52.3).powi(2) < 0.25);
+
+    }  
 
 }
