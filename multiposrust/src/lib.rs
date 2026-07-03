@@ -480,6 +480,7 @@ fn cmpf64(a:&f64,b:&f64)->Ordering{
     return Ordering::Equal;
     }
     
+
 fn closestindex(avec: &Vec<f64>, value: f64)->usize{
     let mut minindex: usize = 0;
     let mut mindiffsq: f64 = (value - avec[0]).powi(2);
@@ -493,13 +494,13 @@ fn closestindex(avec: &Vec<f64>, value: f64)->usize{
     minindex
 }
 
-fn closestindexordered(avec: &Vec<f64>, value: f64)->usize{
-    let size = avec.len();
+fn closestindexordered(orderedvec: &Vec<f64>, value: f64)->usize{
+    let size = orderedvec.len();
     let mut i0:usize = 0;
     let mut i = size/2;
     let mut iend = size-1;
 
-    let mut midvalue = avec[i];
+    let mut midvalue = orderedvec[i];
     loop {
         if value < midvalue{
             iend = i;
@@ -510,10 +511,10 @@ fn closestindexordered(avec: &Vec<f64>, value: f64)->usize{
             i0 = i;
             i = (iend + i )/2;
         }
-        midvalue = avec[i];
+        midvalue = orderedvec[i];
         if (iend as i32 - i0 as i32) <= 1{
-            let de = (value - avec[iend]).powi(2);
-            let d0 = (value - avec[i0]).powi(2);
+            let de = (value - orderedvec[iend]).powi(2);
+            let d0 = (value - orderedvec[i0]).powi(2);
             if d0 < de{
                 i = i0;
             }
