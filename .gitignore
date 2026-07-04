@@ -8,3 +8,4 @@ test.xy
 *.py
 test.sh
 testff.sh
+build.sh
