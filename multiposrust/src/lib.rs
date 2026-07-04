@@ -494,6 +494,8 @@ fn closestindex(avec: &Vec<f64>, value: f64)->usize{
     minindex
 }
 
+/// a function for finding the index of the closest value in an ordered vector. 
+/// The vector must be ordered already or it won't work
 fn closestindexordered(orderedvec: &Vec<f64>, value: f64)->usize{
     let size = orderedvec.len();
     let mut i0:usize = 0;

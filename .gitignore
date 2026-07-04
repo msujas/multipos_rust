@@ -6,3 +6,5 @@ path.edf
 flatfield
 test.xy
 *.py
+test.sh
+testff.sh
