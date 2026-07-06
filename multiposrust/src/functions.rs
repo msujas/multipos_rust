@@ -149,6 +149,9 @@ pub fn closestindexordered(orderedvec: &Vec<f64>, value: f64)->usize{
     i
 }
 
+
+
+
 #[cfg(test)]
 mod tests{
     use super::*;

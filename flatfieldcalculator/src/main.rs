@@ -28,7 +28,7 @@ fn main(){
     };
     let now = Instant::now();
     let mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile, maskdir);
-    mf.calculateflatfield(ffmin,ffmax);
+    mf.calculateflatfield(&cbfdir,ffmin,ffmax);
     let elapsed = now.elapsed();
     println!("program took {} s", elapsed.as_secs());
 }

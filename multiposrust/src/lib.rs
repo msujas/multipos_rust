@@ -106,9 +106,9 @@ impl MultiFile{
                                 let mut breakloop:bool = false;
                                 let mbase = m.file_name().unwrap().to_str().unwrap().replace(".edf", "");
                                 
-                                usedmask = match basename.find(&mbase){
-                                    None => mask,
-                                    Some(_s) => {mbinding = Edf::open(m).unwrap();
+                                usedmask = match basename.contains(&mbase){
+                                    false => mask,
+                                    true => {mbinding = Edf::open(m).unwrap();
                                     breakloop=true;
                                     Some(mbinding.array())},
                                 };
@@ -124,7 +124,7 @@ impl MultiFile{
                             let ponifile = presult.unwrap();
                             let pbasefile = ponifile.file_name().unwrap().to_str().unwrap().replace(".poni","");
                             
-                            if basename == pbasefile{
+                            if basename.contains(&pbasefile){
                                 
                                 println!("{:?}, {:?}", cbffile.clone().unwrap(),ponifile);
                                 let ip = match dc{
@@ -272,7 +272,7 @@ impl MultiFile{
         newcake
     }
 
-    pub fn calculateflatfield(&self, ffmin: f64, ffmax: f64){
+    pub fn calculateflatfield(&self, outdir:&String, ffmin: f64, ffmax: f64){
         let tthmin = self.tthmin;
         let tthmax = self.tthmax;
         let tthbins = self.tthbins;
@@ -327,7 +327,8 @@ impl MultiFile{
         for (val, div) in tthvalues.iter().zip(tthdiv.iter()){
             tthav.push(val/div);
         }
-        save1d(String::from("./test.xy"), &tthrange, &tthav, None);
+        let out1d = format!("{outdir}/ff1d.xy");
+        save1d(out1d, &tthrange, &tthav, None);
         println!("\npattern calculated");
 
         let cbfsize = self.ilist[0].cbf.array().data().len();
@@ -379,11 +380,10 @@ impl MultiFile{
         let flatfieldarray = Array::with_data(dim1, dim2, flatfield);
         let dt : DateTime<Local> = Local::now();
         let dtstring = format!("{:04}{:02}{:02}",dt.year(), dt.month(), dt.day());
-        let fname = format!("./{}_p{:.2}_flatfield.edf", dtstring, self.pfactor);
+        let fname = format!("{}/{}_p{:.2}_flatfield.edf", outdir, dtstring, self.pfactor);
         let mut writer = BufWriter::new(File::create(fname).unwrap());
         Edf::save_array(&flatfieldarray, &mut header, &mut writer, edf::DataType::F32).unwrap();
-
-        //flatfieldim.array = flatfieldarray;       
+    
     }
 }
 
