@@ -272,7 +272,7 @@ impl MultiFile{
         newcake
     }
 
-    pub fn calculateflatfield(&self){
+    pub fn calculateflatfield(&self, ffmin: f64, ffmax: f64){
         let tthmin = self.tthmin;
         let tthmax = self.tthmax;
         let tthbins = self.tthbins;
@@ -366,7 +366,7 @@ impl MultiFile{
             }
             let value = g/d;
             
-            if (value < 0.7) | (value > 1.5){
+            if (value < ffmin) | (value > ffmax){
                 flatfield.push(-1.);
                 continue;
             }

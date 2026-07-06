@@ -89,4 +89,10 @@ pub struct ParamsFF{
     /// directory for individual masks (matched with y and z positions)
     #[arg(long, default_value=None)]
     pub maskdir: Option<String>,
+    /// minimum allowed flat field value
+    #[arg(long, default_value_t=0.7)]
+    pub ffmin: f64,
+    /// maximum allowed flat field value
+    #[arg(long, default_value_t=1.5)]
+    pub ffmax: f64,
 }

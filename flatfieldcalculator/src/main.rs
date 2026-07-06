@@ -16,6 +16,8 @@ fn main(){
     let ponidir = ap.ponidir;
     let maskfileo = ap.maskfile;
     let maskdir = ap.maskdir;
+    let ffmin = ap.ffmin;
+    let ffmax = ap.ffmax;
 
     let chibins = 50;
     let tmp: String;
@@ -26,7 +28,7 @@ fn main(){
     };
     let now = Instant::now();
     let mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile, maskdir);
-    mf.calculateflatfield();
+    mf.calculateflatfield(ffmin,ffmax);
     let elapsed = now.elapsed();
     println!("program took {} s", elapsed.as_secs());
 }
