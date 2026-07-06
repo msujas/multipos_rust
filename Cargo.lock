@@ -785,6 +785,7 @@ dependencies = [
 name = "multiposrust"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "clap",
  "cryiorust",
  "fluosubtraction_rust",

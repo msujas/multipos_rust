@@ -2,7 +2,7 @@
 *.bat
 src/poniInterpolator.rs
 .vscode
-path.edf
+*.edf
 flatfield
 test.xy
 *.py
