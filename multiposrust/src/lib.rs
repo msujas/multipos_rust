@@ -13,7 +13,7 @@ use crate::poniinterpolator::{PoniList, getyz};
 
 pub mod params;
 mod functions;
-mod poniinterpolator;
+pub mod poniinterpolator;
 pub struct ImagePoni{
     pub poni:Poni,
     pub cbf:Cbf,

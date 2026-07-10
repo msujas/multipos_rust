@@ -43,12 +43,12 @@ pub struct PoniYZ{
 }
 
 impl PoniYZ{
-    fn fromfile(ponifile:&String, y:f64, z:f64, dc:Option<Arc<DetectorConfig>>)-> PoniYZ{
+    pub fn fromfile(ponifile:&String, y:f64, z:f64, dc:Option<Arc<DetectorConfig>>)-> PoniYZ{
         let poni = Poni::open(ponifile, dc).unwrap();
         PoniYZ { y, z, poni }
     }
 
-    fn fromparams(y:f64,z:f64, poni1:f64,poni2:f64, distance:f64,rot1:f64,rot2:f64, rot3:f64, wavelength:f64, dc:Option<Arc<DetectorConfig>>, version:f32, pixel1: f64, pixel2:f64 )-> PoniYZ{
+    pub fn fromparams(y:f64,z:f64, poni1:f64,poni2:f64, distance:f64,rot1:f64,rot2:f64, rot3:f64, wavelength:f64, dc:Option<Arc<DetectorConfig>>, version:f32, pixel1: f64, pixel2:f64 )-> PoniYZ{
         let mut poni = Poni::new();
         poni.poni1 = poni1;
         poni.poni2 = poni2;
@@ -65,7 +65,7 @@ impl PoniYZ{
         PoniYZ { y, z, poni }
     }
 
-    fn new()-> PoniYZ{
+    pub fn new()-> PoniYZ{
         
         PoniYZ { y:0.,z: 0.,poni: Poni::new() }
     }
@@ -134,7 +134,7 @@ impl PoniList{
         (tponi1, tponi2,tdist,trot1,trot2,trot3)
         
     }
-    fn interpolateponi(self,y:f64,z:f64)-> Poni{
+    pub fn interpolateponi(self,y:f64,z:f64)-> Poni{
         let p0 = self.ponilist[0].poni.clone();
         let dc = p0.detector_config.clone();
         let version = p0.version;
@@ -173,7 +173,6 @@ impl PoniList{
 
 #[cfg(test)]
 mod test {
-    use glob::glob;
 
 use crate::poniinterpolator::getyz;
 
