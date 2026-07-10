@@ -1,3 +1,3 @@
-A (partial) rewrite of the Python multi position total-scattering processing library (https://github.com/msujas/multipositionpdf) in Rust.
+A rewrite of the Python multi position total-scattering processing library (https://github.com/msujas/multipositionpdf) in Rust.
 
-Includes library and executables for integrating data and calculating flat-fields. Poni interpolation not yet implemented, so requires 1 poni for every file. There is also a Python implementation (https://github.com/msujas/multipos_rustpy) which would allow the integration to run in Python, so you can combine the Python interpolation with the Rust integration in scripts.
+Includes library and executables for integrating data and calculating flat-fields. There is also a Python implementation (https://github.com/msujas/multipos_rustpy) which would allow the Rust library to run in a Python script.
