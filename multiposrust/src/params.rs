@@ -28,7 +28,7 @@ pub struct Params{
     /// cbf directory
     #[arg(short='d', long, default_value  = ".")]
     pub cbfdir: String,
-    /// poni directory
+    /// poni directory - only need most extreme positions and the rest will be interpolated
     #[arg(short='o', long)]
     pub ponidir: String,
     /// save individual cakes or not
@@ -92,7 +92,7 @@ pub struct ParamsFF{
     /// cbf directory
     #[arg(short='d', long, default_value  = ".")]
     pub cbfdir: String,
-    /// poni directory - one for each cbf
+    /// poni directory - only need extreme detector positions and the rest will be interpolated
     #[arg(short='o', long)]
     pub ponidir: String,
     /// mask file path (optional)

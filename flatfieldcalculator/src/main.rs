@@ -1,4 +1,3 @@
-use std::ops::Mul;
 use std::{path::Path, time::Instant};
 use clap::Parser;
 use multiposrust::MultiFile;
@@ -24,7 +23,7 @@ fn main(){
     let zmotor = &ap.zmotor;
     let saveponis = ap.saveponis;
 
-    let chibins = 50;
+    let chibins = 50; //not used for calculating the flat field, but needed to make MultiFile object
     let tmp: String;
     let maskfile = match maskfileo{
         None => None,
