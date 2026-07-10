@@ -3,22 +3,24 @@ use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, Header, Heade
 use fluosubtraction_rust::functions::fluosub_curvefit;
 use integrustio::{ geometry::{IntoGeometry, Units}, integrator::{Cake, Integrator, KEY_BUBBLE_MADE}};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
+use spade::Point2;
 use core::f64;
-use std::{borrow::Cow, f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter, Write}, path::{Path, PathBuf}, sync::Arc, vec};
+use std::{borrow::Cow, f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter,  Write}, path::{Path, PathBuf}, sync::Arc, vec};
 use glob::{ glob};
 use functions::{save1d, cakeav, getmedian, closestindexordered};
 
+use crate::poniinterpolator::{PoniList, getyz};
+
 pub mod params;
 mod functions;
+mod poniinterpolator;
 pub struct ImagePoni{
     pub poni:Poni,
     pub cbf:Cbf,
 }
-impl ImagePoni {
-    pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>, mask: Option<&Array>) -> ImagePoni{
-        let poni = Poni::open(ponifile, dc).unwrap() ;
-        let mut cbf = Cbf::open(cbffile).unwrap();
 
+fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>) -> ImagePoni{
+        let mut cbf = Cbf::open(cbffile).unwrap();
         let flux = match cbf.header().get("# Flux "){
             Some(Float(f64)) => f64.clone(),
             _ => panic!("couldn\'t find flux for {cbffile:?}"),
@@ -33,6 +35,17 @@ impl ImagePoni {
         }
         ImagePoni { poni, cbf }
     }
+
+impl ImagePoni {
+    pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>, mask: Option<&Array>) -> ImagePoni{
+        let poni = Poni::open(ponifile, dc).unwrap() ;
+        buildip(poni, cbffile, mask)
+    }
+
+    pub fn buildfromponi(poni:Poni, cbffile: &Path,mask: Option<&Array>) -> ImagePoni{
+        buildip(poni, cbffile, mask)
+    }
+
     pub fn integrate(self, tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
                 chibins: usize, pfactor: f64)->Cake{
         let mut i = Integrator::new();
@@ -146,6 +159,86 @@ impl MultiFile{
                     
                     MultiFile { ilist,  tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor }
                 }
+
+    pub fn buildinterpolate(cbfdir:&String, ponidir: &String,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
+        chibins:usize,pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, ponipattern:&String, ymotor:&String, 
+        zmotor:&String,saveponis:bool)-> MultiFile{
+        let plist = PoniList::build(ponidir, ponipattern, ymotor, zmotor);
+        let p0 = plist.ponilist[0].poni.clone();
+        let dc = p0.detector_config.clone();
+        let pversion = p0.version;
+        let pix1 = p0.pixel1;
+        let pix2 = p0.pixel2;
+        let wavelength = p0.wavelength;
+        let (tponi1, tponi2, tdist, trot1, trot2, trot3) = plist.getinterpolators();
+        let nnponi1 = tponi1.natural_neighbor();
+        let nnponi2 = tponi2.natural_neighbor();
+        let nndist = tdist.natural_neighbor();
+        let nnrot1 = trot1.natural_neighbor();
+        let nnrot2 = trot2.natural_neighbor();
+        let nnrot3 = trot3.natural_neighbor();
+        let cbfpattern = format!("{cbfdir}/*.cbf");
+        let mut ilist: Vec<ImagePoni> = Vec::new();
+        let binding: Edf;
+        let mask: Option<&Array> = match maskfile {
+            None => None,
+            Some(f) => {binding = edf::Edf::open(f).unwrap();
+                                Some(binding.array())},
+        };
+        let cbffiles = glob(&cbfpattern).unwrap();
+        let mut usedmask = mask.clone();
+        let mut etmp: Edf;
+        for fresult in cbffiles{
+            let f = fresult.unwrap();
+            let fstring = String::from(f.to_str().unwrap());
+            let (yo,zo) = getyz(&fstring, ymotor, zmotor);
+            let y = yo.unwrap();
+            let z = zo.unwrap();
+            let poni1 = nnponi1.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
+            let poni2 = nnponi2.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
+            let dist = nndist.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
+            let rot1 = nnrot1.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
+            let rot2 = nnrot2.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
+            let rot3 = nnrot3.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
+            let mut poni = Poni::new();
+            poni.poni1 = poni1;
+            poni.poni2 = poni2;
+            poni.distance = dist;
+            poni.rot1 = rot1;
+            poni.rot2= rot2;
+            poni.rot3 = rot3;
+            poni.detector_config = dc.clone();
+            poni.version = pversion;
+            poni.wavelength = wavelength;
+            poni.pixel1 = pix1;
+            poni.pixel2 = pix2;
+            if let Some(ref md) = maskdir{
+                let mfiles = glob(&format!("{md}/*.edf")).unwrap();
+                for mresult in mfiles{
+                    let m = mresult.unwrap();
+                    let mbase = m.file_name().unwrap().to_str().unwrap().replace(".edf", "");
+                    usedmask = mask.clone();
+                    if fstring.contains(&mbase){
+                        etmp = Edf::open(m).unwrap();
+                        usedmask = Some(etmp.array());
+                        break;
+                    }
+                }
+            }
+            if saveponis{
+                let outponidir = format!("{cbfdir}/savedponis");
+                if !Path::new(&outponidir).exists(){
+                    std::fs::create_dir(&outponidir).unwrap();
+                }
+                let outponiname = fstring.replace(".cbf", "").replace(cbfdir, "");
+                let mut file = File::create(format!("{outponidir}/{outponiname}.poni")).unwrap();
+                file.write_all( poni.to_string().as_bytes()).unwrap();
+            }
+            let ip = ImagePoni::buildfromponi(poni, &f, usedmask);
+            ilist.push(ip);
+        }
+        MultiFile{ilist, tthmin,tthmax, tthbins, chimin,chimax,chibins,pfactor}
+    }
     pub fn integrate_all(self, cakedir: &String)->Vec<Cake>{
         //let mut cakes :Vec<Cake> = Vec::new(); //vec![Default::default(); self.ilist.len()];
         

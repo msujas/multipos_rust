@@ -23,8 +23,12 @@ fn main() {
     let maskfilestr = ap.maskfile;
     let cakemaskfile = ap.cakemaskfile;
     let maskdir = ap.maskdir;
+    let ymotor = ap.ymotor;
+    let zmotor = ap.zmotor;
+    let ponipattern = ap.ponipattern;
     let fluosub = ap.fluosub;
     let fluok0 = ap.fluok0;
+    let saveponis = ap.saveponis;
 
     let tmp:String;
     let maskfile: Option<&Path> = match maskfilestr {
@@ -39,7 +43,9 @@ fn main() {
         cakedir.push_str(&format!("{cbfdir}/{subdir}"));
         let _ = create_dir(&cakedir);
     }
-    let mf = MultiFile::build(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile,maskdir);
+    //let mf = MultiFile::build(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile,maskdir);
+    let mf = MultiFile::buildinterpolate(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
+        pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis);
     let e1 = now.elapsed();
     println!("loading cbfs and ponis took {} s", e1.as_secs());
     let avdir = format!("{cbfdir}/{subdir}");

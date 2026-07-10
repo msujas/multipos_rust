@@ -46,12 +46,24 @@ pub struct Params{
     /// directory for individual masks (matched with y and z positions)
     #[arg(long, default_value=None)]
     pub maskdir: Option<String>,
+    /// string pattern used to find poni files in directory (must include asterix)
+    #[arg(long, default_value="*.poni")]
+    pub ponipattern: String,
+    /// ymotor name used to find detector y position in file name (format ..._<ymotor>yyy.yy_<zmotor>zzz.zz_...)
+    #[arg(long, default_value="dty")]
+    pub ymotor: String,
+    /// z motor name used to find detector z position in file name (format ..._<ymotor>yyy.yy_<zmotor>zzz.zz_...)
+    #[arg(long, default_value="dtz")]
+    pub zmotor: String,
     /// do fluo subtraction or not
     #[arg(short, long, default_value=None)]
     pub fluosub: bool,
     /// fluok starting value
     #[arg(long, default_value_t=1.)]
     pub fluok0: f64,
+    /// save individual ponis
+    #[arg(short, long, default_value=None)]
+    pub saveponis: bool,
 
 }
 
@@ -95,4 +107,16 @@ pub struct ParamsFF{
     /// maximum allowed flat field value
     #[arg(long, default_value_t=1.5)]
     pub ffmax: f64,
+    /// string pattern used to find poni files in directory (must include asterix)
+    #[arg(long, default_value="*.poni")]
+    pub ponipattern: String,
+    /// ymotor name used to find detector y position in file name (format ..._<ymotor>yyy.yy_<zmotor>zzz.zz_...)
+    #[arg(long, default_value="dty")]
+    pub ymotor: String,
+    /// z motor name used to find detector z position in file name (format ..._<ymotor>yyy.yy_<zmotor>zzz.zz_...)
+    #[arg(long, default_value="dtz")]
+    pub zmotor: String,
+    /// save individual ponis
+    #[arg(short, long, default_value=None)]
+    pub saveponis: bool,
 }

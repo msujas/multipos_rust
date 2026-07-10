@@ -1,3 +1,4 @@
+use std::ops::Mul;
 use std::{path::Path, time::Instant};
 use clap::Parser;
 use multiposrust::MultiFile;
@@ -18,6 +19,10 @@ fn main(){
     let maskdir = ap.maskdir;
     let ffmin = ap.ffmin;
     let ffmax = ap.ffmax;
+    let ponipattern = &ap.ponipattern;
+    let ymotor = &ap.ymotor;
+    let zmotor = &ap.zmotor;
+    let saveponis = ap.saveponis;
 
     let chibins = 50;
     let tmp: String;
@@ -27,7 +32,9 @@ fn main(){
                     Some(Path::new(&tmp))}
     };
     let now = Instant::now();
-    let mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile, maskdir);
+    //let mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile, maskdir);
+    let mf = MultiFile::buildinterpolate(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor,
+         maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis);
     mf.calculateflatfield(&cbfdir,ffmin,ffmax);
     let elapsed = now.elapsed();
     println!("program took {} s", elapsed.as_secs());

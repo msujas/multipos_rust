@@ -1,6 +1,7 @@
-use std::{cmp::Ordering, fs::File, io::{Write}};
-use cryiorust::frame::Array;
+use std::{cmp::Ordering, fs::File, io::Write};
+use cryiorust::{frame::Array};
 use integrustio::integrator::Cake;
+
 
 
 pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<&Array>, medianfilter:f64)-> Vec<f64>{
