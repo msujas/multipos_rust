@@ -186,18 +186,26 @@ impl MultiFile{
         let cbffiles = glob(&cbfpattern).unwrap();
         let mut usedmask = mask.clone();
         let mut etmp: Edf;
+        let interpolationerrormessage = "couldn't interpolate poni value. Maybe ponis for some corners are missing";
         for fresult in cbffiles{
             let f = fresult.unwrap();
             let fstring = String::from(f.to_str().unwrap());
             let (yo,zo) = getyz(&fstring, ymotor, zmotor);
             let y = yo.unwrap();
             let z = zo.unwrap();
-            let poni1 = nnponi1.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
-            let poni2 = nnponi2.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
-            let dist = nndist.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
-            let rot1 = nnrot1.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
-            let rot2 = nnrot2.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
-            let rot3 = nnrot3.interpolate(|v| v.data().height, Point2::new(y,z)).unwrap();
+            
+            let poni1 = nnponi1.interpolate(|v| v.data().height, Point2::new(y,z))
+            .expect(interpolationerrormessage);
+            let poni2 = nnponi2.interpolate(|v| v.data().height, Point2::new(y,z))
+            .expect(interpolationerrormessage);
+            let dist = nndist.interpolate(|v| v.data().height, Point2::new(y,z))
+            .expect(interpolationerrormessage);
+            let rot1 = nnrot1.interpolate(|v| v.data().height, Point2::new(y,z))
+            .expect(interpolationerrormessage);
+            let rot2 = nnrot2.interpolate(|v| v.data().height, Point2::new(y,z))
+            .expect(interpolationerrormessage);
+            let rot3 = nnrot3.interpolate(|v| v.data().height, Point2::new(y,z))
+            .expect(interpolationerrormessage);
             let mut poni = Poni::new();
             poni.poni1 = poni1;
             poni.poni2 = poni2;
