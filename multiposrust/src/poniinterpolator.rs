@@ -104,6 +104,9 @@ impl PoniList{
             pyz.poni = poni;
             plist.push(pyz);
         }
+        if plist.len() == 0{
+            panic!("didn't find any poni files at {ponidir} with pattern {ponipattern}");
+        }
         PoniList { ponilist:plist}
     }
 

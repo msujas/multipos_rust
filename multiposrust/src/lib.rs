@@ -100,7 +100,7 @@ impl MultiFile{
                     let binding: edf::Edf;
                     let mask: Option<&Array> = match maskfile {
                         None => None,
-                        Some(f) => {binding = edf::Edf::open(f).unwrap();
+                        Some(f) => {binding = edf::Edf::open(f).expect(format!("couldn't open or find mask file {f:?}").as_str());
                                           Some(binding.array())},
                     };
                     let mut usedmask : Option<&Array> = mask.clone();
@@ -129,8 +129,6 @@ impl MultiFile{
                                     println!("{basename}.cbf using mask {mbase}.edf");
                                     break;
                                 }
-                                
-                                
                             }
                         }
                         for presult in ponifiles{
@@ -182,7 +180,7 @@ impl MultiFile{
         let binding: Edf;
         let mask: Option<&Array> = match maskfile {
             None => None,
-            Some(f) => {binding = edf::Edf::open(f).unwrap();
+            Some(f) => {binding = edf::Edf::open(f).expect(&format!("couldn't find mask file {f:?}"));
                                 Some(binding.array())},
         };
         let cbffiles = glob(&cbfpattern).unwrap();
