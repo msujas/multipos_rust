@@ -186,9 +186,9 @@ impl MultiFile{
         let cbffiles = glob(&cbfpattern).unwrap();
         let mut usedmask = mask.clone();
         let mut etmp: Edf;
-        let interpolationerrormessage = "couldn't interpolate poni value. Maybe ponis for some corners are missing";
+        let interpolationerrormessage = "couldn't interpolate poni value. Maybe ponis for some corner positions are missing";
         for fresult in cbffiles{
-            let f = fresult.unwrap();
+            let f: PathBuf = fresult.unwrap();
             let fstring = String::from(f.to_str().unwrap());
             let (yo,zo) = getyz(&fstring, ymotor, zmotor);
             let y = yo.unwrap();
@@ -220,11 +220,12 @@ impl MultiFile{
             poni.pixel2 = pix2;
             if let Some(ref md) = maskdir{
                 let mfiles = glob(&format!("{md}/*.edf")).unwrap();
+                usedmask = mask.clone();
                 for mresult in mfiles{
                     let m = mresult.unwrap();
                     let mbase = m.file_name().unwrap().to_str().unwrap().replace(".edf", "");
-                    usedmask = mask.clone();
                     if fstring.contains(&mbase){
+                        println!("using mask {:?} for {:?}",&m, &f);
                         etmp = Edf::open(m).unwrap();
                         usedmask = Some(etmp.array());
                         break;
