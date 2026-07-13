@@ -25,4 +25,5 @@ do
     echo "$s"
     multiposintegrator --tthmin 0.75 --tthmax 68 --tthbins 5000 --chimin 220 --chimax 320 --chibins 101 --pfactor 0.85 \
     --ponidir "$PONIDIR" --cbfdir "$PONIDIR/$s" --maskfile <path to mask file>  --ponipattern *MD.poni
+done
 ```
