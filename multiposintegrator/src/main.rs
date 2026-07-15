@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::process::exit;
 use std::{fs::create_dir, time::Instant};
 use clap::Parser;
 use multiposrust::MultiFile;
@@ -44,8 +45,11 @@ fn main() {
         let _ = create_dir(&cakedir);
     }
     //let mf = MultiFile::build(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile,maskdir);
-    let mf = MultiFile::buildinterpolate(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
-        pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis);
+    let mf = match MultiFile::buildinterpolate(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
+        pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis){
+            Ok(m) => m,
+            Err(_e) => {eprintln!("exiting"); exit(1)}
+        };
     let e1 = now.elapsed();
     println!("loading cbfs and ponis took {} s", e1.as_secs());
     let avdir = format!("{cbfdir}/{subdir}");

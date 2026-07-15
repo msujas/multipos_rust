@@ -1,3 +1,4 @@
+use std::process::exit;
 use std::{path::Path, time::Instant};
 use clap::Parser;
 use multiposrust::MultiFile;
@@ -32,8 +33,11 @@ fn main(){
     };
     let now = Instant::now();
     //let mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile, maskdir);
-    let mf = MultiFile::buildinterpolate(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor,
-         maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis);
+    let mf = match MultiFile::buildinterpolate(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor,
+         maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis){
+            Ok(m) => m,
+            Err(_e) => exit(1)
+         };
     mf.calculateflatfield(&cbfdir,ffmin,ffmax);
     let elapsed = now.elapsed();
     println!("program took {} s", elapsed.as_secs());

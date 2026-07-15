@@ -5,7 +5,7 @@ use integrustio::{ geometry::{IntoGeometry, Units}, integrator::{Cake, Integrato
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use spade::Point2;
 use core::f64;
-use std::{borrow::Cow, f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter,  Write}, path::{Path, PathBuf}, sync::Arc, vec};
+use std::{borrow::Cow, f64::consts::PI, fmt::Error, fs::{File, create_dir}, io::{self, BufWriter,  Write}, path::{Path, PathBuf}, sync::Arc, vec};
 use glob::{ glob};
 use functions::{save1d, cakeav, getmedian, closestindexordered};
 
@@ -160,7 +160,7 @@ impl MultiFile{
 
     pub fn buildinterpolate(cbfdir:&String, ponidir: &String,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
         chibins:usize,pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, ponipattern:&String, ymotor:&String, 
-        zmotor:&String,saveponis:bool)-> MultiFile{
+        zmotor:&String,saveponis:bool)-> Result<MultiFile, Error>{
         let plist = PoniList::build(ponidir, ponipattern, ymotor, zmotor);
         let p0 = plist.ponilist[0].poni.clone();
         let dc = p0.detector_config.clone();
@@ -194,8 +194,11 @@ impl MultiFile{
             let y = yo.unwrap();
             let z = zo.unwrap();
             
-            let poni1 = nnponi1.interpolate(|v| v.data().height, Point2::new(y,z))
-            .expect(interpolationerrormessage);
+            let poni1 = match nnponi1.interpolate(|v| v.data().height, Point2::new(y,z)){
+                Some(p) => p,
+                None => {eprintln!("\nfile: {},\n{interpolationerrormessage}", &fstring);
+                return Err(Error)}
+            };
             let poni2 = nnponi2.interpolate(|v| v.data().height, Point2::new(y,z))
             .expect(interpolationerrormessage);
             let dist = nndist.interpolate(|v| v.data().height, Point2::new(y,z))
@@ -244,7 +247,7 @@ impl MultiFile{
             let ip = ImagePoni::buildfromponi(poni, &f, usedmask);
             ilist.push(ip);
         }
-        MultiFile{ilist, tthmin,tthmax, tthbins, chimin,chimax,chibins,pfactor}
+        Ok(MultiFile{ilist, tthmin,tthmax, tthbins, chimin,chimax,chibins,pfactor})
     }
     pub fn integrate_all(self, cakedir: &String)->Vec<Cake>{
         //let mut cakes :Vec<Cake> = Vec::new(); //vec![Default::default(); self.ilist.len()];

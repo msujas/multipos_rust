@@ -17,7 +17,7 @@ for %%s in ("sample1" "sample2")(
 
 in .sh
 
-```shell
+```bash
 PONIDIR="<path to poni directory>"
 declare -a subdirs=("sample1" "sample2")
 echo $PONIDIR
@@ -27,5 +27,19 @@ do
     multiposintegrator --tthmin 0.75 --tthmax 68 --tthbins 5000 --chimin 220 --chimax 320 --chibins 101 \
     --pfactor 0.85 --ponidir "$PONIDIR" --cbfdir "$PONIDIR/$s" --maskfile <path to mask file>  \
     --ponipattern *MD.poni
+done
+```
+
+Snippet for iterating over all directories in a path
+
+```bat
+for /D %%s in ("<dirname>/*") do (
+    ...
+)
+```
+```bash
+for s in <dirname>/*/
+do
+    ...
 done
 ```
