@@ -71,7 +71,7 @@ pub fn save1d(fname:String, tthrange: &Vec<f64>, vec1d: &Vec<f64>, sigma : Optio
             }
         outstring = outstring + &String::from("\n");
         }
-    let mut file = File::create(fname).unwrap();
+    let mut file = File::create(&fname).expect(&format!("error creating file {:?}",&fname));
     file.write(outstring.as_bytes()).unwrap();    
 }
 
@@ -135,7 +135,7 @@ pub fn closestindexordered(orderedvec: &Vec<f64>, value: f64)->usize{
             i = (iend + i )/2;
         }
         midvalue = orderedvec[i];
-        if (iend as i32 - i0 as i32) <= 1{
+        if (iend - i0) <= 1{
             let de = (value - orderedvec[iend]).powi(2);
             let d0 = (value - orderedvec[i0]).powi(2);
             if d0 < de{
