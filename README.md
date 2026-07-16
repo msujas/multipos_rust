@@ -43,3 +43,9 @@ do
     ...
 done
 ```
+
+Integrated and merged cake of C60
+![alt text](images/cake.png)
+
+Calculated flat field from 55 imaes of X-ray scattering from a glass rod
+![alt text](images/flatfield.png)

@@ -216,7 +216,7 @@ impl MultiFile{
                     let mbase = m.file_name().unwrap().to_str().unwrap().replace(".edf", "");
                     if fstring.contains(&mbase){
                         println!("using mask {:?} for {:?}",&m, &f);
-                        etmp = Edf::open(m).unwrap();
+                        etmp = Edf::open(&m).expect(&format!("couldn't open mask file {:?}",&m));
                         usedmask = Some(etmp.array());
                         break;
                     }

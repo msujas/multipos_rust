@@ -148,7 +148,7 @@ impl PoniList{
      nndist:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, nnrot1:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, 
      nnrot2:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>,nnrot3:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>)->
      Result<Poni, InterpolationError>{
-        let interpolationerrormessage = "couldn't interpolate poni value. Maybe ponis for some corner positions are missing";
+        let interpolationerrormessage = "couldn't interpolate poni value, likely out of range. Maybe ponis for some corner positions are missing";
         let poni1 = match nnponi1.interpolate(|v| v.data().height, Point2::new(y,z)){
             Some(p) => p,
             None => {eprintln!("\ny: {y}, z: {z},\n{interpolationerrormessage}");
