@@ -1,7 +1,7 @@
 use chrono::{DateTime, Datelike, Local};
 use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, Header, HeaderEntry::{self, Float}}, poni::{DetectorConfig, Poni}};
 use fluosubtraction_rust::functions::fluosub_curvefit;
-use integrustio::{ geometry::{IntoGeometry, Units}, integrator::{Cake, Integrator, KEY_BUBBLE_MADE}};
+use integrustio::{ geometry::{IntoGeometry, Units::{self}}, integrator::{Cake, Integrator, KEY_BUBBLE_MADE}};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use core::f64;
 use std::{borrow::Cow,  f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter,  Write}, path::{Path, PathBuf}, sync::Arc, vec};
@@ -48,10 +48,12 @@ impl ImagePoni {
     }
 
     pub fn integrate(self, tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
-                chibins: usize, pfactor: f64)->Cake{
+                chibins: usize, pfactor: f64, units: &str)->Cake{
+        let units = strtounits(Some(units));
         let mut i = Integrator::new();
         i.set_poni(self.poni);
         i.set_radial_bins(tthbins);
+        i.set_units(units);
         i.set_azimuthal_bins(chibins);
         i.set_polarization(pfactor);
         i.set_azimuthal_range(Some((chimin,chimax)));
@@ -63,10 +65,10 @@ impl ImagePoni {
     }
 
     pub fn get_cake(self,tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
-                chibins: usize, pfactor: f64, cakedir:&String)->Cake{
+                chibins: usize, pfactor: f64, cakedir:&String, units:&str )->Cake{
         let mut fname = self.cbf.name().to_string();
         fname.push_str(".edf");
-        let cake = self.integrate(tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor);
+        let cake = self.integrate(tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, units);
         
         if cakedir != ""{
             
@@ -77,6 +79,33 @@ impl ImagePoni {
     }
 }
 
+fn strtounits(unitstr:Option<&str>)->Units{
+    let units = match unitstr{
+        None => Units::TwoTheta,
+        Some(s) => {match s{
+            "TwoTheta" => Units::TwoTheta,
+            "2theta" => Units::TwoTheta,
+            "QA" => Units::QA,
+            "Qnm" => Units::Qnm,
+            _ => {println!("couldn't interpret unit string, defaulting to 2theta");Units::TwoTheta},
+        }}
+    };
+    units
+}
+
+fn optiontostr(unito:Option<&str>)-> String{
+    let units = match unito {
+        None => "TwoTheta",
+        Some(s) => {match s{
+            "twotheta" | "2theta" | "TwoTheta" | "2Theta" => "TwoTheta",
+            "QA"|"Qa"|"qa" => "QA",
+            "Qnm"|"qnm" => "Qnm",
+            _ => {println!("couldn't interpret unit string, defaulting to TwoTheta");"TwoTheta"}
+
+        }}
+    };
+    String::from(units)
+}
 
 pub struct MultiFile{
     ilist :Vec<ImagePoni>,
@@ -87,13 +116,18 @@ pub struct MultiFile{
     chimax: f64,
     chibins: usize,
     pfactor:f64,
+    units:String,
 
 }
+
+
 
 impl MultiFile{
 
     pub fn build(cbfdir:&String, ponidir: &String, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
-                chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>) -> MultiFile {
+                chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, units:Option<&str>) -> MultiFile {
+                    //let units = strtoUnits(units);
+                    let units = optiontostr(units);
                     let mut dc = None;
                     let pattern = format!("{cbfdir}/*.cbf");
                     let cbffiles = glob(&pattern).unwrap();
@@ -156,12 +190,13 @@ impl MultiFile{
                     }
                     //let mut it = cbffiles.into_iter();
                     
-                    MultiFile { ilist,  tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor }
+                    MultiFile { ilist,  tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, units }
                 }
 
     pub fn buildinterpolate(cbfdir:&String, ponidir: &String,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
         chibins:usize,pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, ponipattern:&String, ymotor:&String, 
-        zmotor:&String,saveponis:bool)-> Result<MultiFile, BuildError>{
+        zmotor:&String,saveponis:bool, units:Option<&str>)-> Result<MultiFile, BuildError>{
+        let units = optiontostr(units);
         let plist = PoniList::build(ponidir, ponipattern, ymotor, zmotor);
         let p0 = plist.ponilist[0].poni.clone();
         /*
@@ -238,7 +273,7 @@ impl MultiFile{
             eprintln!("coudn't find any files in {cbfdir}");
             return Err(BuildError)
         }
-        Ok(MultiFile{ilist, tthmin,tthmax, tthbins, chimin,chimax,chibins,pfactor})
+        Ok(MultiFile{ilist, tthmin,tthmax, tthbins, chimin,chimax,chibins,pfactor, units})
     }
     pub fn integrate_all(self, cakedir: &String)->Vec<Cake>{
         //let mut cakes :Vec<Cake> = Vec::new(); //vec![Default::default(); self.ilist.len()];
@@ -251,7 +286,7 @@ impl MultiFile{
             print!("{i}, ");
             io::stdout().flush().unwrap();
             ip.get_cake(self.tthmin, self.tthmax, 
-                    self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir)
+                    self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir, &self.units)
         }).collect();
      
         cakes

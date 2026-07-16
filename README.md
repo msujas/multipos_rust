@@ -9,9 +9,9 @@ set "ponidir=<path to poni dir>"
 echo %ponidir%
 for %%s in ("sample1" "sample2")(
     echo %%s
-    multiposintegrator<.lnk> --tthmin 0.75 --tthmax 68 --tthbins 5000 --chimin 220 --chimax 320 --chibins 101 ^
-    --pfactor 0.85 --ponidir %ponidir% --cbfdir %ponidir%/%%s --maskfile <path to mask file> ^
-    --ponipattern *MD.poni
+    multiposintegrator<.lnk> --tthmin 0.75 --tthmax 68 --tthbins 5000 --chimin 220 --chimax 320 ^
+    --chibins 101 --pfactor 0.85 --ponidir %ponidir% --cbfdir %ponidir%/%%s ^
+    --maskfile <path to mask file> --ponipattern *MD.poni
 )
 ```
 
@@ -24,9 +24,9 @@ echo $PONIDIR
 for s in "${subdirs[@]}"
 do
     echo "$s"
-    multiposintegrator --tthmin 0.75 --tthmax 68 --tthbins 5000 --chimin 220 --chimax 320 --chibins 101 \
-    --pfactor 0.85 --ponidir "$PONIDIR" --cbfdir "$PONIDIR/$s" --maskfile <path to mask file>  \
-    --ponipattern *MD.poni
+    multiposintegrator --tthmin 0.75 --tthmax 68 --tthbins 5000 --chimin 220 --chimax 320 \
+    --chibins 101 --pfactor 0.85 --ponidir "$PONIDIR" --cbfdir "$PONIDIR/$s" \
+    --maskfile <path to mask file>  --ponipattern *MD.poni
 done
 ```
 
@@ -47,5 +47,5 @@ done
 Integrated and merged cake of C60
 ![alt text](images/cake.png)
 
-Calculated flat field from 55 imaes of X-ray scattering from a glass rod
+Calculated flat field from 55 images of X-ray scattering from a glass rod
 ![alt text](images/flatfield.png)
