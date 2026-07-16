@@ -8,9 +8,9 @@ use std::{borrow::Cow,  f64::consts::PI, fs::{File, create_dir}, io::{self, BufW
 use glob::{ glob};
 use functions::{save1d, cakeav, getmedian, closestindexordered};
 
-use crate::poniinterpolator::{PoniList, getyz, InterpolationError};
+use crate::poniinterpolator::{PoniList, getyz};
 
-
+pub struct BuildError;
 
 pub mod params;
 mod functions;
@@ -161,7 +161,7 @@ impl MultiFile{
 
     pub fn buildinterpolate(cbfdir:&String, ponidir: &String,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
         chibins:usize,pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, ponipattern:&String, ymotor:&String, 
-        zmotor:&String,saveponis:bool)-> Result<MultiFile, InterpolationError>{
+        zmotor:&String,saveponis:bool)-> Result<MultiFile, BuildError>{
         let plist = PoniList::build(ponidir, ponipattern, ymotor, zmotor);
         let p0 = plist.ponilist[0].poni.clone();
         /*
@@ -195,16 +195,16 @@ impl MultiFile{
             let fstring = String::from(f.to_str().unwrap());
             let (yo,zo) = getyz(&fstring, ymotor, zmotor);
             let y = match yo{
-                None =>  {eprintln!("couldn't find y value for file {}", &fstring);return Err(InterpolationError)},
+                None =>  {eprintln!("couldn't find y value for file {}", &fstring);return Err(BuildError)},
                 Some(val) => val,
             };
             let z = match zo{
-                None => {eprintln!("couldn't find z value for file {}", &fstring);return Err(InterpolationError)},
+                None => {eprintln!("couldn't find z value for file {}", &fstring);return Err(BuildError)},
                 Some(val) => val,
             };
             
             let poni = match PoniList::interpolatexy( y, z, p0.clone(), &nnponi1, &nnponi2, &nndist, &nnrot1, &nnrot2, &nnrot3){
-                Err(e) => return Err(e),
+                Err(_e) => return Err(BuildError),
                 Ok(p) => p,
             };
            
@@ -233,6 +233,10 @@ impl MultiFile{
             }
             let ip = ImagePoni::buildfromponi(poni, &f, usedmask);
             ilist.push(ip);
+        }
+        if ilist.len() < 2{
+            eprintln!("coudn't find any files in {cbfdir}");
+            return Err(BuildError)
         }
         Ok(MultiFile{ilist, tthmin,tthmax, tthbins, chimin,chimax,chibins,pfactor})
     }
