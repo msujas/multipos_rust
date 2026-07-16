@@ -3,13 +3,14 @@ use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, Header, Heade
 use fluosubtraction_rust::functions::fluosub_curvefit;
 use integrustio::{ geometry::{IntoGeometry, Units}, integrator::{Cake, Integrator, KEY_BUBBLE_MADE}};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
-use spade::Point2;
 use core::f64;
-use std::{borrow::Cow, f64::consts::PI, fmt::Error, fs::{File, create_dir}, io::{self, BufWriter,  Write}, path::{Path, PathBuf}, sync::Arc, vec};
+use std::{borrow::Cow,  f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter,  Write}, path::{Path, PathBuf}, sync::Arc, vec};
 use glob::{ glob};
 use functions::{save1d, cakeav, getmedian, closestindexordered};
 
-use crate::poniinterpolator::{PoniList, getyz};
+use crate::poniinterpolator::{PoniList, getyz, InterpolationError};
+
+
 
 pub mod params;
 mod functions;
@@ -160,15 +161,17 @@ impl MultiFile{
 
     pub fn buildinterpolate(cbfdir:&String, ponidir: &String,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
         chibins:usize,pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, ponipattern:&String, ymotor:&String, 
-        zmotor:&String,saveponis:bool)-> Result<MultiFile, Error>{
+        zmotor:&String,saveponis:bool)-> Result<MultiFile, InterpolationError>{
         let plist = PoniList::build(ponidir, ponipattern, ymotor, zmotor);
         let p0 = plist.ponilist[0].poni.clone();
+        /*
         let dc = p0.detector_config.clone();
         let pversion = p0.version;
         let pix1 = p0.pixel1;
         let pix2 = p0.pixel2;
         let wavelength = p0.wavelength;
-        let (tponi1, tponi2, tdist, trot1, trot2, trot3) = plist.getinterpolators();
+         */
+        let (tponi1, tponi2, tdist, trot1, trot2, trot3) = plist.gettriangulations();
         let nnponi1 = tponi1.natural_neighbor();
         let nnponi2 = tponi2.natural_neighbor();
         let nndist = tdist.natural_neighbor();
@@ -186,41 +189,25 @@ impl MultiFile{
         let cbffiles = glob(&cbfpattern).unwrap();
         let mut usedmask = mask.clone();
         let mut etmp: Edf;
-        let interpolationerrormessage = "couldn't interpolate poni value. Maybe ponis for some corner positions are missing";
+
         for fresult in cbffiles{
             let f: PathBuf = fresult.unwrap();
             let fstring = String::from(f.to_str().unwrap());
             let (yo,zo) = getyz(&fstring, ymotor, zmotor);
-            let y = yo.unwrap();
-            let z = zo.unwrap();
-            
-            let poni1 = match nnponi1.interpolate(|v| v.data().height, Point2::new(y,z)){
-                Some(p) => p,
-                None => {eprintln!("\nfile: {},\n{interpolationerrormessage}", &fstring);
-                return Err(Error)}
+            let y = match yo{
+                None =>  {eprintln!("couldn't find y value for file {}", &fstring);return Err(InterpolationError)},
+                Some(val) => val,
             };
-            let poni2 = nnponi2.interpolate(|v| v.data().height, Point2::new(y,z))
-            .expect(interpolationerrormessage);
-            let dist = nndist.interpolate(|v| v.data().height, Point2::new(y,z))
-            .expect(interpolationerrormessage);
-            let rot1 = nnrot1.interpolate(|v| v.data().height, Point2::new(y,z))
-            .expect(interpolationerrormessage);
-            let rot2 = nnrot2.interpolate(|v| v.data().height, Point2::new(y,z))
-            .expect(interpolationerrormessage);
-            let rot3 = nnrot3.interpolate(|v| v.data().height, Point2::new(y,z))
-            .expect(interpolationerrormessage);
-            let mut poni = Poni::new();
-            poni.poni1 = poni1;
-            poni.poni2 = poni2;
-            poni.distance = dist;
-            poni.rot1 = rot1;
-            poni.rot2= rot2;
-            poni.rot3 = rot3;
-            poni.detector_config = dc.clone();
-            poni.version = pversion;
-            poni.wavelength = wavelength;
-            poni.pixel1 = pix1;
-            poni.pixel2 = pix2;
+            let z = match zo{
+                None => {eprintln!("couldn't find z value for file {}", &fstring);return Err(InterpolationError)},
+                Some(val) => val,
+            };
+            
+            let poni = match PoniList::interpolatexy( y, z, p0.clone(), &nnponi1, &nnponi2, &nndist, &nnrot1, &nnrot2, &nnrot3){
+                Err(e) => return Err(e),
+                Ok(p) => p,
+            };
+           
             if let Some(ref md) = maskdir{
                 let mfiles = glob(&format!("{md}/*.edf")).unwrap();
                 usedmask = mask.clone();

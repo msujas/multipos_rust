@@ -36,7 +36,7 @@ fn main(){
     let mf = match MultiFile::buildinterpolate(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor,
          maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis){
             Ok(m) => m,
-            Err(_e) => exit(1)
+            Err(_e) => {eprintln!("error. Exiting"); exit(1)}
          };
     mf.calculateflatfield(&cbfdir,ffmin,ffmax);
     let elapsed = now.elapsed();
