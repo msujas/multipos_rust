@@ -30,7 +30,7 @@ fn main() {
     let fluosub = ap.fluosub;
     let fluok0 = ap.fluok0;
     let saveponis = ap.saveponis;
-    let unito = ap.units;
+    let unit = ap.unit;
 
     let tmp:String;
     let maskfile: Option<&Path> = match maskfilestr {
@@ -47,7 +47,7 @@ fn main() {
     }
     //let mf = MultiFile::build(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile,maskdir);
     let mf = match MultiFile::buildinterpolate(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
-        pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis, unito.as_deref()){
+        pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis, Some(&unit)){
             Ok(m) => m,
             Err(_e) => {eprintln!("exiting"); exit(1)}
         };

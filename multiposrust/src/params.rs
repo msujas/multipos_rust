@@ -64,10 +64,10 @@ pub struct Params{
     /// save individual ponis
     #[arg(short, long, default_value=None)]
     pub saveponis: bool,
-    /// integration units, default 2theta. Options TwoTheta/2Theta/2theta/twotheta, QA/qa, Qnm/qnm. 
+    /// integration unit. Options TwoTheta/2Theta/2theta/twotheta, QA/qa, Qnm/qnm. 
     /// Will default to TwoTheta if invalid
-    #[arg(short, long, default_value=None)]
-    pub units: Option<String>,
+    #[arg(short, long, default_value="TwoTheta")]
+    pub unit: String,
 
 }
 
@@ -125,6 +125,6 @@ pub struct ParamsFF{
     pub saveponis: bool,
     /// integration units, default 2theta. Options TwoTheta/2Theta/2theta/twotheta, QA/qa, Qnm/qnm. 
     /// Will default to TwoTheta if invalid
-    #[arg(short, long, default_value=None)]
-    pub units: Option<String>,
+    #[arg(short, long, default_value="TwoTheta")]
+    pub unit: String,
 }
