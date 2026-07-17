@@ -273,8 +273,11 @@ impl MultiFile{
                 if !Path::new(&outponidir).exists(){
                     std::fs::create_dir(&outponidir).unwrap();
                 }
-                let outponiname = fstring.replace(".cbf", "").replace(cbfdir, "");
-                let mut file = File::create(format!("{outponidir}/{outponiname}.poni")).unwrap();
+                let cbfbase = Path::new(&fstring).file_name()
+                .unwrap();
+                let outponistr = String::from(cbfbase.to_str().unwrap()).replace(".cbf", ".poni");
+                let mut file = File::create(format!("{outponidir}/{}", outponistr))
+                .expect(&format!("couldn't create file: {}/{}",&outponidir,&outponistr));
                 file.write_all( poni.to_string().as_bytes()).unwrap();
             }
             let ip = match ImagePoni::buildfromponi(poni, &f, usedmask){
