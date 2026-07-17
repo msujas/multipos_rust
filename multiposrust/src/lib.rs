@@ -524,8 +524,9 @@ impl MultiFile{
         let dt : DateTime<Local> = Local::now();
         let dtstring = format!("{:04}{:02}{:02}",dt.year(), dt.month(), dt.day());
         let fname = format!("{}/{}_p{:.2}_flatfield.edf", outdir, dtstring, self.pfactor);
-        let mut writer = BufWriter::new(File::create(fname).unwrap());
+        let mut writer = BufWriter::new(File::create(&fname).unwrap());
         Edf::save_array(&flatfieldarray, &mut header, &mut writer, edf::DataType::F32).unwrap();
+        println!("flat-field image saved to {}",&fname);
     
     }
 }
