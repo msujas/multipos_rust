@@ -10,6 +10,7 @@ use functions::{save1d, cakeav, getmedian, closestindexordered};
 
 use crate::poniinterpolator::{PoniList, getyz};
 
+#[derive(Debug)]
 pub struct BuildError;
 
 pub mod params;
@@ -20,11 +21,12 @@ pub struct ImagePoni{
     pub cbf:Cbf,
 }
 
-fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>) -> ImagePoni{
-        let mut cbf = Cbf::open(cbffile).unwrap();
+fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>) -> Result<ImagePoni, BuildError>{
+        let mut cbf = Cbf::open(cbffile).expect(&format!("couldn't open file: {cbffile:?}"));
         let flux = match cbf.header().get("# Flux "){
             Some(Float(f64)) => f64.clone(),
-            _ => panic!("couldn\'t find flux for {cbffile:?}"),
+            _ => {eprintln!("couldn\'t find flux for {cbffile:?}");
+                return Err(BuildError)},
         };
         if let Some(mask) = mask{
             for (i , m) in cbf.array_mut().data_mut().iter_mut().zip(mask.data().iter()){
@@ -34,16 +36,16 @@ fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>) -> ImagePoni{
                 }
             }
         }
-        ImagePoni { poni, cbf }
+        Ok(ImagePoni { poni, cbf })
     }
 
 impl ImagePoni {
-    pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>, mask: Option<&Array>) -> ImagePoni{
+    pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>, mask: Option<&Array>) -> Result<ImagePoni, BuildError>{
         let poni = Poni::open(ponifile, dc).unwrap() ;
         buildip(poni, cbffile, mask)
     }
 
-    pub fn buildfromponi(poni:Poni, cbffile: &Path,mask: Option<&Array>) -> ImagePoni{
+    pub fn buildfromponi(poni:Poni, cbffile: &Path,mask: Option<&Array>) -> Result<ImagePoni, BuildError>{
         buildip(poni, cbffile, mask)
     }
 
@@ -125,10 +127,11 @@ pub struct MultiFile{
 impl MultiFile{
 
     pub fn build(cbfdir:&String, ponidir: &String, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
-                chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, units:Option<&str>) -> MultiFile {
+                chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, unit:Option<&str>) -> 
+                Result<MultiFile,BuildError> {
                     //let units = strtoUnits(units);
-                    let units = optiontostr(units);
-                    let mut dc = None;
+                    let units = optiontostr(unit);
+                    let mut dc: Option<Arc<DetectorConfig>> = None;
                     let pattern = format!("{cbfdir}/*.cbf");
                     let cbffiles = glob(&pattern).unwrap();
                     let mut cbffile: Option<Arc<PathBuf>>;
@@ -141,6 +144,7 @@ impl MultiFile{
                     let mut usedmask : Option<&Array> = mask.clone();
                     let mut ilist:Vec<ImagePoni> = Vec::new();
                     let mut mbinding:Edf;
+                    let mut getdetconf=true;
                     for fresult in cbffiles{
                         cbffile = Some(Arc::new(fresult.unwrap()));
                         let cbfclone = cbffile.clone();
@@ -173,11 +177,17 @@ impl MultiFile{
                             if basename.contains(&pbasefile){
                                 
                                 println!("{:?}, {:?}", cbffile.clone().unwrap(),ponifile);
-                                let ip = match dc{
-                                    None => {let ip = ImagePoni::build(&ponifile,&cbffile.clone().unwrap(), None, usedmask);
-                                    dc = ip.poni.detector_config.clone();ip},
-                                    Some(ref dc) => ImagePoni::build(&ponifile,&cbffile.clone().unwrap(),
-                                     Some(dc.clone()), usedmask),
+
+                                if getdetconf{
+                                    let ptemp = Poni::open(&ponifile, None)
+                                    .expect(&format!("couldn't read poni file {:?}",&ponifile));
+                                    dc = ptemp.detector_config;
+                                    getdetconf = false;
+                                }
+                                let ip = match ImagePoni::build(&ponifile,&cbffile.clone().unwrap(), dc.clone(),
+                                 usedmask){
+                                    Ok(ip) => ip,
+                                    Err(e) => return Err(e),
                                 };
                                 ilist.push(ip);
                                 break;
@@ -186,17 +196,18 @@ impl MultiFile{
                     }
                     if ilist.len() < 2{
                         let nitems = ilist.len();
-                        panic!("build function requires at least 2 pairs of ponis and cbfs, found {nitems}. cbf and poni files must match in the base name")
-                    }
+                        eprintln!("build function requires at least 2 pairs of ponis and cbfs, found {nitems}. cbf and poni files must match in the base name");
+                        return Err(BuildError)
+                    };
                     //let mut it = cbffiles.into_iter();
                     
-                    MultiFile { ilist,  tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, units }
+                    Ok(MultiFile { ilist,  tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, units })
                 }
 
     pub fn buildinterpolate(cbfdir:&String, ponidir: &String,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
         chibins:usize,pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, ponipattern:&String, ymotor:&String, 
-        zmotor:&String,saveponis:bool, units:Option<&str>)-> Result<MultiFile, BuildError>{
-        let units = optiontostr(units);
+        zmotor:&String,saveponis:bool, unit:Option<&str>)-> Result<MultiFile, BuildError>{
+        let units = optiontostr(unit);
         let plist = PoniList::build(ponidir, ponipattern, ymotor, zmotor);
         let p0 = plist.ponilist[0].poni.clone();
         /*
@@ -266,7 +277,10 @@ impl MultiFile{
                 let mut file = File::create(format!("{outponidir}/{outponiname}.poni")).unwrap();
                 file.write_all( poni.to_string().as_bytes()).unwrap();
             }
-            let ip = ImagePoni::buildfromponi(poni, &f, usedmask);
+            let ip = match ImagePoni::buildfromponi(poni, &f, usedmask){
+                Ok(i) => i,
+                Err(e) => return Err(e),
+            };
             ilist.push(ip);
         }
         if ilist.len() < 2{

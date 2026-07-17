@@ -45,7 +45,7 @@ fn main() {
         cakedir.push_str(&format!("{cbfdir}/{subdir}"));
         let _ = create_dir(&cakedir);
     }
-    //let mf = MultiFile::build(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile,maskdir);
+    
     let mf = match MultiFile::buildinterpolate(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
         pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis, Some(&unit)){
             Ok(m) => m,

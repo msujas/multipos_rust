@@ -33,9 +33,8 @@ fn main(){
                     Some(Path::new(&tmp))}
     };
     let now = Instant::now();
-    //let mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, maskfile, maskdir);
-    let mf = match MultiFile::buildinterpolate(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor,
-         maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis, Some(&unit)){
+    let mf = match MultiFile::buildinterpolate(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, 
+        chibins, pfactor,maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis, Some(&unit)){
             Ok(m) => m,
             Err(_e) => {eprintln!("error. Exiting"); exit(1)}
          };

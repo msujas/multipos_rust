@@ -144,10 +144,10 @@ impl PoniList{
     }
 
     
-    pub fn interpolatexy( y:f64, z:f64, poni0:Poni, nnponi1:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, nnponi2:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>,
-     nndist:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, nnrot1:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, 
-     nnrot2:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>,nnrot3:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>)->
-     Result<Poni, InterpolationError>{
+    pub fn interpolatexy( y:f64, z:f64, poni0:Poni, nnponi1:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, 
+    nnponi2:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>,nndist:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, 
+    nnrot1:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, nnrot2:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>,
+    nnrot3:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>)->Result<Poni, InterpolationError>{
         let interpolationerrormessage = "couldn't interpolate poni value, likely out of range. Maybe ponis for some corner positions are missing";
         let poni1 = match nnponi1.interpolate(|v| v.data().height, Point2::new(y,z)){
             Some(p) => p,
