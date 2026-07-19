@@ -8,7 +8,7 @@ use std::{borrow::Cow,  f64::consts::PI, fs::{File, create_dir}, io::{self, BufW
 use glob::{ glob};
 use functions::{save1d, cakeav, getmedian, closestindexordered};
 
-use crate::poniinterpolator::{PoniList, getyz};
+use crate::poniinterpolator::{Interpolators, PoniList, getyz};
 
 #[derive(Debug)]
 pub struct BuildError;
@@ -217,13 +217,9 @@ impl MultiFile{
         let pix2 = p0.pixel2;
         let wavelength = p0.wavelength;
          */
-        let (tponi1, tponi2, tdist, trot1, trot2, trot3) = plist.gettriangulations();
-        let nnponi1 = tponi1.natural_neighbor();
-        let nnponi2 = tponi2.natural_neighbor();
-        let nndist = tdist.natural_neighbor();
-        let nnrot1 = trot1.natural_neighbor();
-        let nnrot2 = trot2.natural_neighbor();
-        let nnrot3 = trot3.natural_neighbor();
+        let t = plist.gettriangulations();
+        let interp = Interpolators::build(&t);
+
         let cbfpattern = format!("{cbfdir}/*.cbf");
         let mut ilist: Vec<ImagePoni> = Vec::new();
         let binding: Edf;
@@ -235,6 +231,10 @@ impl MultiFile{
         let cbffiles = glob(&cbfpattern).unwrap();
         let mut usedmask = mask.clone();
         let mut etmp: Edf;
+        let outponidir = format!("{}/savedponis",cbfdir);
+        if !Path::new(&outponidir).exists() & saveponis{
+            std::fs::create_dir(&outponidir).unwrap();
+        }
 
         for fresult in cbffiles{
             let f: PathBuf = fresult.unwrap();
@@ -249,7 +249,7 @@ impl MultiFile{
                 Some(val) => val,
             };
             
-            let poni = match PoniList::interpolatexy( y, z, p0.clone(), &nnponi1, &nnponi2, &nndist, &nnrot1, &nnrot2, &nnrot3){
+            let poni = match PoniList::interpolatexy( y, z, p0.clone(), &interp){
                 Err(_e) => return Err(BuildError),
                 Ok(p) => p,
             };
@@ -269,10 +269,6 @@ impl MultiFile{
                 }
             }
             if saveponis{
-                let outponidir = format!("{cbfdir}/savedponis");
-                if !Path::new(&outponidir).exists(){
-                    std::fs::create_dir(&outponidir).unwrap();
-                }
                 let cbfbase = Path::new(&fstring).file_name()
                 .unwrap();
                 let outponistr = String::from(cbfbase.to_str().unwrap()).replace(".cbf", ".poni");

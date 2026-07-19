@@ -113,8 +113,7 @@ impl PoniList{
         PoniList { ponilist:plist}
     }
 
-    pub fn gettriangulations(self)->(DelaunayTriangulation::<PointHeight>, DelaunayTriangulation::<PointHeight>,DelaunayTriangulation::<PointHeight>,
-    DelaunayTriangulation::<PointHeight>,DelaunayTriangulation::<PointHeight>,DelaunayTriangulation::<PointHeight>){
+    pub fn gettriangulations(self)->Triangluators{
         let mut tponi1 =  DelaunayTriangulation::<PointHeight>::new();
         let mut tponi2 = DelaunayTriangulation::<PointHeight>::new();
         let mut trot1 = DelaunayTriangulation::<PointHeight>::new();
@@ -139,30 +138,28 @@ impl PoniList{
         let nndist: NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>> = tdist.natural_neighbor();
         */
         //[nnponi1,nnponi2, nndist, nnrot1,nnrot2, nnrot3]
-        (tponi1, tponi2,tdist,trot1,trot2,trot3)
+        //(tponi1, tponi2,tdist,trot1,trot2,trot3)
+        Triangluators { tponi1, tponi2, tdist, trot1, trot2, trot3 }
         
     }
 
     
-    pub fn interpolatexy( y:f64, z:f64, poni0:Poni, nnponi1:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, 
-    nnponi2:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>,nndist:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, 
-    nnrot1:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>, nnrot2:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>,
-    nnrot3:&NaturalNeighbor<'_, DelaunayTriangulation<PointHeight>>)->Result<Poni, InterpolationError>{
+    pub fn interpolatexy( y:f64, z:f64, poni0:Poni, interp: &Interpolators)->Result<Poni, InterpolationError>{
         let interpolationerrormessage = "couldn't interpolate poni value, likely out of range. Maybe ponis for some corner positions are missing";
-        let poni1 = match nnponi1.interpolate(|v| v.data().height, Point2::new(y,z)){
+        let poni1 = match interp.nnponi1.interpolate(|v| v.data().height, Point2::new(y,z)){
             Some(p) => p,
             None => {eprintln!("\ny: {y}, z: {z},\n{interpolationerrormessage}");
             return Err(InterpolationError)}
         };
-        let poni2 = nnponi2.interpolate(|v| v.data().height, Point2::new(y,z))
+        let poni2 = interp.nnponi2.interpolate(|v| v.data().height, Point2::new(y,z))
         .expect(interpolationerrormessage);
-        let dist = nndist.interpolate(|v| v.data().height, Point2::new(y,z))
+        let dist = interp.nndist.interpolate(|v| v.data().height, Point2::new(y,z))
         .expect(interpolationerrormessage);
-        let rot1 = nnrot1.interpolate(|v| v.data().height, Point2::new(y,z))
+        let rot1 = interp.nnrot1.interpolate(|v| v.data().height, Point2::new(y,z))
         .expect(interpolationerrormessage);
-        let rot2 = nnrot2.interpolate(|v| v.data().height, Point2::new(y,z))
+        let rot2 = interp.nnrot2.interpolate(|v| v.data().height, Point2::new(y,z))
         .expect(interpolationerrormessage);
-        let rot3 = nnrot3.interpolate(|v| v.data().height, Point2::new(y,z))
+        let rot3 = interp.nnrot3.interpolate(|v| v.data().height, Point2::new(y,z))
         .expect(interpolationerrormessage);
 
         let pversion = poni0.version;
@@ -194,19 +191,14 @@ impl PoniList{
         let pixel1 = p0.pixel1;
         let pixel2 = p0.pixel2;
         let wavelength = self.ponilist[0].poni.wavelength;
-        let (tponi1, tponi2,tdist,trot1,trot2, trot3) = self.gettriangulations();
-        let nnponi1  = tponi1.natural_neighbor();
-        let nnponi2 = tponi2.natural_neighbor();
-        let nnrot1  = trot1.natural_neighbor();
-        let nnrot2  = trot2.natural_neighbor();
-        let nnrot3  = trot3.natural_neighbor();
-        let nndist  = tdist.natural_neighbor();
-        let poni1 = nnponi1.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
-        let poni2 = nnponi2.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
-        let dist = nndist.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
-        let rot1 = nnrot1.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
-        let rot2 = nnrot2.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
-        let rot3 = nnrot3.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
+        let t = self.gettriangulations();
+        let interp = Interpolators::build(&t);
+        let poni1 = interp.nnponi1.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
+        let poni2 = interp.nnponi2.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
+        let dist = interp.nndist.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
+        let rot1 = interp.nnrot1.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
+        let rot2 = interp.nnrot2.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
+        let rot3 = interp.nnrot3.interpolate(|v| v.data().height, Point2 ::new(y,z)).unwrap();
         let mut poni = Poni::new();
         poni.poni1=poni1;
         poni.poni2 = poni2;
@@ -241,4 +233,38 @@ use crate::poniinterpolator::getyz;
         assert_eq!(z, 108.00);
     }
 
+}
+
+
+pub struct Triangluators{
+    tponi1: DelaunayTriangulation::<PointHeight>,
+    tponi2: DelaunayTriangulation::<PointHeight>,
+    tdist: DelaunayTriangulation::<PointHeight>,
+    trot1: DelaunayTriangulation::<PointHeight>,
+    trot2: DelaunayTriangulation::<PointHeight>,
+    trot3: DelaunayTriangulation::<PointHeight>,
+}
+
+
+
+pub struct Interpolators<'a>{
+    nnponi1: NaturalNeighbor<'a, DelaunayTriangulation<PointHeight>> ,
+    nnponi2: NaturalNeighbor<'a, DelaunayTriangulation<PointHeight>> ,
+    nndist: NaturalNeighbor<'a, DelaunayTriangulation<PointHeight>>,
+    nnrot1: NaturalNeighbor<'a, DelaunayTriangulation<PointHeight>> ,
+    nnrot2: NaturalNeighbor<'a, DelaunayTriangulation<PointHeight>> ,
+    nnrot3: NaturalNeighbor<'a, DelaunayTriangulation<PointHeight>> ,
+}
+
+impl Interpolators<'_>{
+    pub fn build<'a>(t: &'a Triangluators)->Interpolators<'a>{
+        let nnponi1 = t.tponi1.natural_neighbor();
+        let nnponi2 = t.tponi2.natural_neighbor();
+        let nndist = t.tdist.natural_neighbor();
+        let nnrot1 = t.trot1.natural_neighbor();
+        let nnrot2 = t.trot2.natural_neighbor();
+        let nnrot3 = t.trot3.natural_neighbor();
+        Interpolators { nnponi1, nnponi2, nndist, nnrot1, nnrot2, nnrot3 }
+
+    }
 }
