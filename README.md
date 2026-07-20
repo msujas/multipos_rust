@@ -2,6 +2,26 @@ A rewrite of the Python multi position total-scattering processing library (http
 
 Includes library and executables for integrating data and calculating flat-fields. The executables are called multiposintegrator for the integration program, and flatfieldcalculator for the program calculating flat fields. For the flat fields it is best to use data from an amorphous scatterer such as glass. Data can be measured from an arbitrary number of positions.
 
+Instructions:
+The programs rely on reading the detector y- and z-positions from the file names. Input a path containing the cbf files and one containing the poni files. The poni files must contain all the corner positions, the rest can be interpolated e.g. here y and z motors are called dty and dtz respectively
+
+```
+|--path 
+   |--to  
+      |--cbfs
+         |--image1_dty152.52_dtz092.50_1.cbf
+         |--image1_dty250.95_dtz092.50_1.cbf
+         |--...
+
+|--path 
+   |--to  
+      |--ponis
+         |--dty080.00_dtz050.00.poni
+         |--dty080.00_dtz140.00.poni
+         |--dty390.00_dtz050.00.poni
+         |--dty390.00_dtz140.00.poni
+```
+
 There is also a Python implementation (https://github.com/msujas/multipos_rustpy) which would allow the Rust library to run in a Python script.
 
 Maybe most convenient to run in a batch/shell script. E.g. for multiple subdirs (Windows .bat)

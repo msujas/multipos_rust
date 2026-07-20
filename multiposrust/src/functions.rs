@@ -1,8 +1,27 @@
-use std::{cmp::Ordering, fs::File, io::Write};
+use std::{cmp::Ordering, fs::File, io::Write, path::Path};
 use cryiorust::{frame::Array};
 use integrustio::integrator::Cake;
 
-
+pub fn getyz(fname:&Path, ymotor:&String, zmotor:&String)->(Option<f64>,Option<f64>){
+        let f = fname.file_stem().unwrap().to_str().unwrap();
+        let fsplit = f.split("_");
+        let mut yo: Option<f64> = None;
+        let mut zo: Option<f64> = None;
+        for item in fsplit{
+            if item.contains(ymotor){
+                let ystring = item.replace(ymotor, "");
+                let y = ystring.parse::<f64>()
+                .expect(&format!("couldn't convert y-string: {ystring} to float"));
+                yo = Some(y);
+            }
+            if item.contains(zmotor){
+                let zstring = item.replace(zmotor, "");
+                let z = zstring.parse::<f64>().expect(&format!("couldn't convert z-string: {zstring} to float"));
+                zo = Some(z);
+            }
+        }
+        (yo,zo)   
+}
 
 pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<&Array>, medianfilter:f64)-> Vec<f64>{
 
@@ -205,5 +224,23 @@ mod tests{
         assert!((avec[i3] - 52.3).powi(2) < 0.25);
 
     }  
+        #[test]
+        fn getyztest(){
+        let fname= String::from("emptyCap_dty138.79_dtz108.00_001_0001p.poni");
+        let fpath = Path::new(&fname);
+        let fpath2 = Path::new("D:\\data\\July2026\\dty138.79_dtz108.00.poni");
+        let ymotor = String::from("dty");
+        let zmotor = String::from("dtz");
+        let (yo,zo) = getyz(fpath, &ymotor, &zmotor);
+        let y = yo.unwrap();
+        let z = zo.unwrap();
+        assert_eq!(y, 138.79);
+        assert_eq!(z, 108.00);
+        let (yo,zo) = getyz(fpath2, &ymotor, &zmotor);
+        let y = yo.unwrap();
+        let z = zo.unwrap();
+        assert_eq!(y, 138.79);
+        assert_eq!(z, 108.00);
+    }
 
 }

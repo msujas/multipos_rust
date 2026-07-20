@@ -6,9 +6,9 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterat
 use core::f64;
 use std::{borrow::Cow,  f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter,  Write}, path::{Path, PathBuf}, sync::Arc, vec};
 use glob::{ glob};
-use functions::{save1d, cakeav, getmedian, closestindexordered};
+use functions::{save1d, cakeav, getmedian, closestindexordered,getyz};
 
-use crate::poniinterpolator::{Interpolators, PoniList, getyz};
+use crate::poniinterpolator::{Interpolators, PoniList};
 
 #[derive(Debug)]
 pub struct BuildError;
@@ -239,7 +239,7 @@ impl MultiFile{
         for fresult in cbffiles{
             let f: PathBuf = fresult.unwrap();
             let fstring = String::from(f.to_str().unwrap());
-            let (yo,zo) = getyz(&fstring, ymotor, zmotor);
+            let (yo,zo) = getyz(&f, ymotor, zmotor);
             let y = match yo{
                 None =>  {eprintln!("couldn't find y value for file {}", &fstring);return Err(BuildError)},
                 Some(val) => val,

@@ -1,26 +1,9 @@
 use std::{ sync::Arc};
-
+use crate::functions::getyz;
 use cryiorust::poni::{DetectorConfig, Poni};
 use glob::glob;
 use spade::{DelaunayTriangulation, HasPosition, NaturalNeighbor, Point2, Triangulation};
 
-pub fn getyz(fname:&String, ymotor:&String, zmotor:&String)->(Option<f64>,Option<f64>){
-
-        let fsplit = fname.split("_");
-        let mut yo: Option<f64> = None;
-        let mut zo: Option<f64> = None;
-        for item in fsplit{
-            if item.contains(ymotor){
-                let y = item.replace(ymotor, "").parse::<f64>().unwrap();
-                yo = Some(y);
-            }
-            if item.contains(zmotor){
-                let z = item.replace(zmotor, "").parse::<f64>().unwrap();
-                zo = Some(z);
-            }
-        }
-        (yo,zo)   
-}
 
 #[derive(Debug)]
 pub struct InterpolationError;
@@ -88,15 +71,15 @@ impl PoniList{
         for fresult in ponifiles{
             let fname = fresult.as_ref().unwrap();
             println!("{fname:?}");
-            let f = String::from(fresult.as_ref().unwrap().file_name().unwrap().to_str().unwrap());
-            let (yo,zo) = getyz(&f, ymotor, zmotor);
+            //let f = String::from(fresult.as_ref().unwrap().file_name().unwrap().to_str().unwrap());
+            let (yo,zo) = getyz(fname, ymotor, zmotor);
             let mut pyz = PoniYZ::new();
             match yo {
-                None => {panic!("couldn't find y value for {f}");}
+                None => {panic!("couldn't find y value for {:?}", fname);}
                 Some(y) => {pyz.y = y;}
             }
             match zo {
-                None => {panic!("couldn't find z value for {f}");}
+                None => {panic!("couldn't find z value for {:?}",fname);}
                 Some(z) => {pyz.z = z;}
             }
             let poni = match dc{
@@ -215,27 +198,6 @@ impl PoniList{
     }
 }
 
-
-#[cfg(test)]
-mod test {
-
-use crate::poniinterpolator::getyz;
-
-    #[test]
-    fn getyztest(){
-        let fname= String::from("emptyCap_dty138.79_dtz108.00_001_0001p.poni");
-        let ymotor = String::from("dty");
-        let zmotor = String::from("dtz");
-        let (yo,zo) = getyz(&fname, &ymotor, &zmotor);
-        let y = yo.unwrap();
-        let z = zo.unwrap();
-        assert_eq!(y, 138.79);
-        assert_eq!(z, 108.00);
-    }
-
-}
-
-
 pub struct Triangluators{
     tponi1: DelaunayTriangulation::<PointHeight>,
     tponi2: DelaunayTriangulation::<PointHeight>,
@@ -246,6 +208,25 @@ pub struct Triangluators{
 }
 
 
+impl Triangluators{
+    pub fn build(ponilist: PoniList)-> Triangluators{
+        let mut tponi1 =  DelaunayTriangulation::<PointHeight>::new();
+        let mut tponi2 = DelaunayTriangulation::<PointHeight>::new();
+        let mut trot1 = DelaunayTriangulation::<PointHeight>::new();
+        let mut trot2 = DelaunayTriangulation::<PointHeight>::new();
+        let mut trot3 = DelaunayTriangulation::<PointHeight>::new();
+        let mut tdist = DelaunayTriangulation::<PointHeight>::new();
+        for pyz in ponilist.ponilist{
+            tponi1.insert(PointHeight{position:Point2::new( pyz.y, pyz.z), height: pyz.poni.poni1}).unwrap();
+            tponi2.insert(PointHeight{position:Point2::new( pyz.y, pyz.z), height: pyz.poni.poni2}).unwrap();
+            trot1.insert(PointHeight{position:Point2::new( pyz.y, pyz.z), height: pyz.poni.rot1}).unwrap();
+            trot2.insert(PointHeight{position:Point2::new( pyz.y, pyz.z), height: pyz.poni.rot2}).unwrap();
+            tdist.insert(PointHeight{position:Point2::new( pyz.y, pyz.z), height: pyz.poni.distance}).unwrap();
+            trot3.insert(PointHeight{position:Point2::new( pyz.y, pyz.z), height: pyz.poni.rot3}).unwrap();
+        };
+        Triangluators { tponi1, tponi2, tdist, trot1, trot2, trot3 }
+    }
+}
 
 pub struct Interpolators<'a>{
     nnponi1: NaturalNeighbor<'a, DelaunayTriangulation<PointHeight>> ,
@@ -268,3 +249,11 @@ impl Interpolators<'_>{
 
     }
 }
+
+
+
+
+
+
+
+
