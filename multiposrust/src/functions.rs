@@ -71,6 +71,7 @@ pub fn save1d(fname:String, tthrange: &Vec<f64>, vec1d: &Vec<f64>, sigma : Optio
             }
         outstring = outstring + &String::from("\n");
         }
+    println!("saving 1d pattern to {}", &fname);
     let mut file = File::create(&fname).expect(&format!("error creating file {:?}",&fname));
     file.write(outstring.as_bytes()).unwrap();    
 }

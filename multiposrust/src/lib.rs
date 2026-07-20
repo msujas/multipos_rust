@@ -73,9 +73,9 @@ impl ImagePoni {
         let cake = self.integrate(tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, units);
         
         if cakedir != ""{
-            
             let cakefile = format!("{}/{}",cakedir,fname);
-            cake.store(cakefile, None).unwrap();
+            println!("saving individual cake to {}",&cakefile);
+            cake.store(&cakefile, None).unwrap();
         }
         cake
     }
@@ -298,8 +298,8 @@ impl MultiFile{
         .map(|(i,ip)|{
             print!("{i}, ");
             io::stdout().flush().unwrap();
-            ip.get_cake(self.tthmin, self.tthmax, 
-                    self.tthbins, self.chimin, self.chimax, self.chibins, self.pfactor, cakedir, &self.units)
+            ip.get_cake(self.tthmin, self.tthmax, self.tthbins, self.chimin, self.chimax, 
+                self.chibins, self.pfactor, cakedir, &self.units)
         }).collect();
      
         cakes
@@ -388,7 +388,8 @@ impl MultiFile{
         newcake.radial.sigma = sigma;
         newcake.radial.positions = rpos.clone();
         let fnameav = format!("{avdir}/avcake.edf");
-        newcake.store(fnameav, None).unwrap();
+        println!("saving cake to {}",&fnameav);
+        newcake.store(&fnameav, None).unwrap();
         
         let av1d_alt = cakeav(&cakes, cakemask, medianfilter);
         let fname1d_alt = format!("{avdir}/av1d.xy");
