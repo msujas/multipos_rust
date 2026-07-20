@@ -67,12 +67,12 @@ impl ImagePoni {
     }
 
     pub fn get_cake(self,tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
-                chibins: usize, pfactor: f64, cakedir:&String, units:&str )->Cake{
+                chibins: usize, pfactor: f64, cakedir:Option<&String>, units:&str )->Cake{
         let mut fname = self.cbf.name().to_string();
         fname.push_str(".edf");
         let cake = self.integrate(tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, units);
         
-        if cakedir != ""{
+        if let Some(cakedir) = cakedir{
             let cakefile = format!("{}/{}",cakedir,fname);
             println!("saving individual cake to {}",&cakefile);
             cake.store(&cakefile, None).unwrap();
@@ -288,7 +288,7 @@ impl MultiFile{
         }
         Ok(MultiFile{ilist, tthmin,tthmax, tthbins, chimin,chimax,chibins,pfactor, units})
     }
-    pub fn integrate_all(self, cakedir: &String)->Vec<Cake>{
+    pub fn integrate_all(self, cakedir: Option<&String>)->Vec<Cake>{
         //let mut cakes :Vec<Cake> = Vec::new(); //vec![Default::default(); self.ilist.len()];
         
         println!("integrating images");
@@ -305,7 +305,7 @@ impl MultiFile{
         cakes
     }
 
-    pub fn average_cakes(self, medianfilter:f64, cakedir: &String, avdir: &String, cakemaskfile: Option<String>)->Cake{
+    pub fn average_cakes(self, medianfilter:f64, cakedir: Option<&String>, avdir: &String, cakemaskfile: Option<String>)->Cake{
         let cakes = self.integrate_all(cakedir);
         println!("\naveraging cakes");
         let c0 = &cakes[0];
@@ -314,6 +314,10 @@ impl MultiFile{
         let chisize = c0.cake.dim1();
         let radsize = c0.cake.dim2();
         let _ = create_dir(&avdir);
+        if let Some(cd) = cakedir{
+            let _ = create_dir(&cd);
+        }
+
 
         let mut avvec : Vec<f64> = vec![0.;c0.cake.len()];
         let mut vec1d : Vec<f64> = vec![0.; radsize];
@@ -398,9 +402,12 @@ impl MultiFile{
         newcake
     }
 
-    pub fn integrate_fluosub(self, medianfilter:f64, cakedir: &String, avdir: &String, cakemaskfile: Option<String>, 
+    pub fn integrate_fluosub(self, medianfilter:f64, cakedir: Option<&String>, avdir: &String, cakemaskfile: Option<String>, 
                         fluo_k0:f64, tthindex:usize)->Cake{
         let pfactor = self.pfactor;
+        if let Some(cd) = cakedir{
+            let _ = create_dir(&cd);
+        };
         let cake = self.average_cakes(medianfilter, cakedir, avdir, cakemaskfile);
         let newcake = fluosub_curvefit(fluo_k0, cake, pfactor, tthindex);
         let fsdir = format!("{avdir}fluoSub");

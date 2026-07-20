@@ -1,6 +1,6 @@
 use std::path::Path;
 use std::process::exit;
-use std::{fs::create_dir, time::Instant};
+use std::{time::Instant};
 use clap::Parser;
 use multiposrust::MultiFile;
 use multiposrust::params::Params;
@@ -39,12 +39,11 @@ fn main() {
                         Some(Path::new(&tmp))},
     };
 
-    let mut cakedir: String = String::from("");
     
-    if savecakes {
-        cakedir.push_str(&format!("{cbfdir}/{subdir}"));
-        let _ = create_dir(&cakedir);
-    }
+    let cakedir = match savecakes {
+        true => Some(&format!("{cbfdir}/{subdir}")),
+        false => None,        
+    };
     
     let mf = match MultiFile::buildinterpolate(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
         pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis, Some(&unit)){
@@ -55,10 +54,10 @@ fn main() {
     println!("loading cbfs and ponis took {} s", e1.as_secs());
     let avdir = format!("{cbfdir}/{subdir}");
     if fluosub{
-        mf.integrate_fluosub(4., &cakedir, &avdir, cakemaskfile, fluok0, tthbins*96/100);
+        mf.integrate_fluosub(4., cakedir, &avdir, cakemaskfile, fluok0, tthbins*96/100);
     }
     else {
-        mf.average_cakes(4., &cakedir, &avdir, cakemaskfile);
+        mf.average_cakes(4., cakedir, &avdir, cakemaskfile);
     };
     let elapsed =  now.elapsed();
     println!("");
