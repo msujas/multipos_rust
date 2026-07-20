@@ -48,12 +48,13 @@ done
 
 Example for the flat field integration (NB: maskdir is for individual masks (matching y and z positions), maskfile will be applied by default unless a matching file is found in the maskdir):
 ```bat
+set "ponidir=path\to\poni\directory"
 set "cbfdir=path\to\image\directory"
 set "maskdir=%cbfdir%\masks" 
 set "basemaskfile=path\to\base\mask\file.edf"
 cargo run --release --bin flatfieldcalculator -- --cbfdir %cbfdir% ^
 --maskfile %basemaskfile% ^
---tthmin 0.8 --tthmax 58 --tthbins 5000 --chimin 180 --chimax 360 --ponidir D:\beamlineData\July2026\multipositions ^
+--tthmin 0.8 --tthmax 58 --tthbins 5000 --chimin 180 --chimax 360 --ponidir %ponidir% ^
 --maskdir %maskdir% ^
 --ponipattern *MD.poni --ymotor dty --zmotor dtz --saveponis --ffmin 0.7 --ffmax 1.3
 ```
