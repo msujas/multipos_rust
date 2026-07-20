@@ -8,7 +8,7 @@ use std::{borrow::Cow,  f64::consts::PI, fs::{File, create_dir}, io::{self, BufW
 use glob::{ glob};
 use functions::{save1d, cakeav, getmedian, closestindexordered,getyz};
 
-use crate::poniinterpolator::{Interpolators, PoniList};
+use crate::{functions::yzcompare, poniinterpolator::{Interpolators, PoniList}};
 
 #[derive(Debug)]
 pub struct BuildError;
@@ -210,13 +210,7 @@ impl MultiFile{
         let units = optiontostr(unit);
         let plist = PoniList::build(ponidir, ponipattern, ymotor, zmotor);
         let p0 = plist.ponilist[0].poni.clone();
-        /*
-        let dc = p0.detector_config.clone();
-        let pversion = p0.version;
-        let pix1 = p0.pixel1;
-        let pix2 = p0.pixel2;
-        let wavelength = p0.wavelength;
-         */
+
         let t = plist.gettriangulations();
         let interp = Interpolators::build(&t);
 
@@ -259,8 +253,7 @@ impl MultiFile{
                 usedmask = mask.clone();
                 for mresult in mfiles{
                     let m = mresult.unwrap();
-                    let mbase = m.file_name().unwrap().to_str().unwrap().replace(".edf", "");
-                    if fstring.contains(&mbase){
+                    if yzcompare(&f, &m, ymotor, zmotor){
                         println!("using mask {:?} for {:?}",&m, &f);
                         etmp = Edf::open(&m).expect(&format!("couldn't open mask file {:?}",&m));
                         usedmask = Some(etmp.array());

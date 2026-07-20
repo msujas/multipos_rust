@@ -9,8 +9,8 @@ The programs rely on reading the detector y- and z-positions from the file names
 |--path 
    |--to  
       |--cbfs
-         |--image1_dty152.52_dtz092.50_1.cbf
-         |--image1_dty250.95_dtz092.50_1.cbf
+         |--sample1_dty152.52_dtz092.50_1.cbf
+         |--sample1_dty250.95_dtz092.50_1.cbf
          |--...
 
 |--path 
@@ -20,6 +20,7 @@ The programs rely on reading the detector y- and z-positions from the file names
          |--dty080.00_dtz140.00.poni
          |--dty390.00_dtz050.00.poni
          |--dty390.00_dtz140.00.poni
+         |--...
 ```
 
 There is also a Python implementation (https://github.com/msujas/multipos_rustpy) which would allow the Rust library to run in a Python script.

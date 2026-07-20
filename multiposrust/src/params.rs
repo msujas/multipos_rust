@@ -68,9 +68,6 @@ pub struct Params{
     /// Will default to TwoTheta if invalid
     #[arg(short, long, default_value="TwoTheta")]
     pub unit: String,
-    /// file extension for the scattering images
-    #[arg(short, long, default_value="cbf")]
-    pub imageext: String,
 
 }
 
@@ -130,7 +127,4 @@ pub struct ParamsFF{
     /// Will default to TwoTheta if invalid
     #[arg(short, long, default_value="TwoTheta")]
     pub unit: String,
-    /// file extension for the scattering images
-    #[arg(short, long, default_value="cbf")]
-    pub imageext: String,
 }

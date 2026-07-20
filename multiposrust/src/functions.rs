@@ -23,6 +23,17 @@ pub fn getyz(fname:&Path, ymotor:&String, zmotor:&String)->(Option<f64>,Option<f
         (yo,zo)   
 }
 
+pub fn yzcompare(file1:&Path, file2: &Path, ymotor:&String, zmotor:&String)->bool{
+    let tolerance = 0.00001; //using a tolerance for float comparison
+    let (y1,z1) = getyz(file1, ymotor, zmotor);
+    let (y2,z2) = getyz(file2, ymotor, zmotor);
+    let y1 = y1.unwrap();
+    let y2 = y2.unwrap();
+    let z1 = z1.unwrap();
+    let z2 = z2.unwrap();
+    ((y1 - y2).abs() < tolerance) & ((z1-z2).abs() < tolerance)
+}
+
 pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<&Array>, medianfilter:f64)-> Vec<f64>{
 
     let c0 = &cakelist[0];
@@ -241,6 +252,15 @@ mod tests{
         let z = zo.unwrap();
         assert_eq!(y, 138.79);
         assert_eq!(z, 108.00);
+    }
+
+    #[test]
+    fn yzcomparetest(){
+        let f1 = Path::new("emptyCap_dty138.79_dtz108.00_001_0001p.cbf");
+        let f2 = Path::new("dty138.79_dtz108.00_001_0001p.edf");
+        let ymotor = String::from("dty");
+        let zmotor = String::from("dtz");
+        assert!(yzcompare(f1, f2, &ymotor, &zmotor));
     }
 
 }
