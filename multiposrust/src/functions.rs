@@ -16,7 +16,8 @@ pub fn getyz(fname:&Path, ymotor:&String, zmotor:&String)->(Option<f64>,Option<f
             }
             if item.contains(zmotor){
                 let zstring = item.replace(zmotor, "");
-                let z = zstring.parse::<f64>().expect(&format!("couldn't convert z-string: {zstring} to float"));
+                let z = zstring.parse::<f64>()
+                .expect(&format!("couldn't convert z-string: {zstring} to float"));
                 zo = Some(z);
             }
         }
@@ -27,10 +28,22 @@ pub fn yzcompare(file1:&Path, file2: &Path, ymotor:&String, zmotor:&String)->boo
     let tolerance = 0.00001; //using a tolerance for float comparison
     let (y1,z1) = getyz(file1, ymotor, zmotor);
     let (y2,z2) = getyz(file2, ymotor, zmotor);
-    let y1 = y1.unwrap();
-    let y2 = y2.unwrap();
-    let z1 = z1.unwrap();
-    let z2 = z2.unwrap();
+    let y1 = match y1{
+        None => return false,
+        Some(y) => y,
+    };
+    let y2 = match y2{
+        None => return false,
+        Some(y) => y,
+    };
+    let z1 = match z1{
+        None => return false,
+        Some(z) => z,
+    };
+    let z2 = match z2{
+        None => return false,
+        Some(z) => z,
+    };
     ((y1 - y2).abs() < tolerance) & ((z1-z2).abs() < tolerance)
 }
 

@@ -6,24 +6,22 @@ Instructions:
 The programs rely on reading the detector y- and z-positions from the file names. Input a path containing the cbf files and one containing the poni files. The poni files must contain all the corner positions, the rest can be interpolated e.g. here y and z motors are called dty and dtz respectively
 
 ```
-|--path 
-   |--to  
-      |--cbfs
-         |--sample1_dty152.52_dtz092.50_1.cbf
-         |--sample1_dty250.95_dtz092.50_1.cbf
-         |--...
+|-path 
+  |-to  
+    |-cbfs
+      |-sample1_dty152.52_dtz092.50_1.cbf
+      |-sample1_dty250.95_dtz092.50_1.cbf
+      |-...
 
-|--path 
-   |--to  
-      |--ponis
-         |--dty080.00_dtz050.00.poni
-         |--dty080.00_dtz140.00.poni
-         |--dty390.00_dtz050.00.poni
-         |--dty390.00_dtz140.00.poni
-         |--...
+|-path 
+  |-to  
+    |-ponis
+      |-dty080.00_dtz050.00.poni
+      |-dty080.00_dtz140.00.poni
+      |-dty390.00_dtz050.00.poni
+      |-dty390.00_dtz140.00.poni
+      |-...
 ```
-
-There is also a Python implementation (https://github.com/msujas/multipos_rustpy) which would allow the Rust library to run in a Python script.
 
 Maybe most convenient to run in a batch/shell script. E.g. for multiple subdirs (Windows .bat)
 
@@ -85,3 +83,6 @@ Integrated and merged cake of C<sub>60</sub>
 
 Calculated flat field from 55 images of X-ray scattering from a glass rod
 ![alt text](images/flatfield.png)
+
+
+There is also a Python implementation (https://github.com/msujas/multipos_rustpy) which would allow the Rust library to run in a Python script.

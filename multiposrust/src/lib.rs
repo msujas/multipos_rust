@@ -1,10 +1,12 @@
 use chrono::{DateTime, Datelike, Local};
-use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, Header, HeaderEntry::{self, Float}}, poni::{DetectorConfig, Poni}};
+use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, Header, HeaderEntry::{self, Float}}, 
+poni::{DetectorConfig, Poni}};
 use fluosubtraction_rust::functions::fluosub_curvefit;
 use integrustio::{ geometry::{IntoGeometry, Units::{self}}, integrator::{Cake, Integrator, KEY_BUBBLE_MADE}};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use core::f64;
-use std::{borrow::Cow,  f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter,  Write}, path::{Path, PathBuf}, sync::Arc, vec};
+use std::{borrow::Cow,  f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter,  Write}, path::{Path, PathBuf}, 
+sync::Arc, vec};
 use glob::{ glob};
 use functions::{save1d, cakeav, getmedian, closestindexordered,getyz};
 
@@ -127,18 +129,19 @@ pub struct MultiFile{
 impl MultiFile{
 
     pub fn build(cbfdir:&String, ponidir: &String, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
-                chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, unit:Option<&str>) -> 
-                Result<MultiFile,BuildError> {
+                chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, unit:Option<&str>, ymotor:&String,
+            zmotor:&String) -> Result<MultiFile,BuildError> {
                     //let units = strtoUnits(units);
                     let units = optiontostr(unit);
                     let mut dc: Option<Arc<DetectorConfig>> = None;
                     let pattern = format!("{cbfdir}/*.cbf");
                     let cbffiles = glob(&pattern).unwrap();
-                    let mut cbffile: Option<Arc<PathBuf>>;
+                    let mut cbffile: Arc<PathBuf>;
                     let binding: edf::Edf;
                     let mask: Option<&Array> = match maskfile {
                         None => None,
-                        Some(f) => {binding = edf::Edf::open(f).expect(format!("couldn't open or find mask file {f:?}").as_str());
+                        Some(f) => {binding = edf::Edf::open(f)
+                                          .expect(format!("couldn't open or find mask file {f:?}").as_str());
                                           Some(binding.array())},
                     };
                     let mut usedmask : Option<&Array> = mask.clone();
@@ -146,10 +149,10 @@ impl MultiFile{
                     let mut mbinding:Edf;
                     let mut getdetconf=true;
                     for fresult in cbffiles{
-                        cbffile = Some(Arc::new(fresult.unwrap()));
+                        cbffile = Arc::new(fresult.unwrap());
                         let cbfclone = cbffile.clone();
                         
-                        let basename = cbfclone.unwrap().file_name().unwrap().to_str().unwrap().replace(".cbf", "");
+                        let basename = cbfclone.file_name().unwrap().to_str().unwrap().replace(".cbf", "");
                         let ponifiles = glob(&format!("{ponidir}/*.poni")).unwrap();
                         if let Some(md) = &maskdir{
                             let maskfiles = glob(&format!("{md}/*.edf")).unwrap();
@@ -157,8 +160,7 @@ impl MultiFile{
                                 let m = mresult.unwrap();
                                 let mut breakloop:bool = false;
                                 let mbase = m.file_name().unwrap().to_str().unwrap().replace(".edf", "");
-                                
-                                usedmask = match basename.contains(&mbase){
+                                usedmask = match yzcompare(&cbffile.clone(), &m, ymotor, zmotor){
                                     false => mask,
                                     true => {mbinding = Edf::open(m).unwrap();
                                     breakloop=true;
@@ -172,11 +174,9 @@ impl MultiFile{
                         }
                         for presult in ponifiles{
                             let ponifile = presult.unwrap();
-                            let pbasefile = ponifile.file_name().unwrap().to_str().unwrap().replace(".poni","");
-                            
-                            if basename.contains(&pbasefile){
+                            if yzcompare(&cbffile.clone(), &ponifile, ymotor, zmotor){
                                 
-                                println!("{:?}, {:?}", cbffile.clone().unwrap(),ponifile);
+                                println!("{:?}, {:?}", cbffile.clone(),ponifile);
 
                                 if getdetconf{
                                     let ptemp = Poni::open(&ponifile, None)
@@ -184,7 +184,7 @@ impl MultiFile{
                                     dc = ptemp.detector_config;
                                     getdetconf = false;
                                 }
-                                let ip = match ImagePoni::build(&ponifile,&cbffile.clone().unwrap(), dc.clone(),
+                                let ip = match ImagePoni::build(&ponifile,&cbffile.clone(), dc.clone(),
                                  usedmask){
                                     Ok(ip) => ip,
                                     Err(e) => return Err(e),
@@ -533,3 +533,29 @@ impl MultiFile{
 
 
 
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    #[test]
+    fn mfbuildtest(){
+        let cbfdir = String::from("D:\\beamlineData\\April2026\\multipos3_tilt\\C60");
+        let ponidir = String::from("D:\\beamlineData\\April2026\\multipos3_tilt\\C60\\ponis_rp");
+        let tthmin = 0.75;
+        let tthmax = 68.;
+        let tthbins:usize = 5000;
+        let chimin = 220.;
+        let chimax = 320.;
+        let chibins:usize = 101;
+        let pfactor = 0.85;
+        let maskfile = None;
+        let maskdir = None;
+        let unit = Some("TwoTheta");
+        let ymotor = String::from("dty");
+        let zmotor = String::from("dtz");
+        let _mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
+            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor).unwrap();
+
+    }
+
+}
