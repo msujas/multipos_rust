@@ -23,6 +23,34 @@ pub struct ImagePoni{
     pub cbf:Cbf,
 }
 
+fn strtounits(unitstr:Option<&str>)->Units{
+    let units = match unitstr{
+        None => Units::TwoTheta,
+        Some(s) => {match s{
+            "TwoTheta" => Units::TwoTheta,
+            "2theta" => Units::TwoTheta,
+            "QA" => Units::QA,
+            "Qnm" => Units::Qnm,
+            _ => {println!("couldn't interpret unit string, defaulting to 2theta");Units::TwoTheta},
+        }}
+    };
+    units
+}
+
+fn optiontostr(unito:Option<&str>)-> String{
+    let units = match unito {
+        None => "TwoTheta",
+        Some(s) => {match s{
+            "twotheta" | "2theta" | "TwoTheta" | "2Theta" => "TwoTheta",
+            "QA"|"Qa"|"qa" => "QA",
+            "Qnm"|"qnm" => "Qnm",
+            _ => {println!("couldn't interpret unit string, defaulting to TwoTheta");"TwoTheta"}
+
+        }}
+    };
+    String::from(units)
+}
+
 fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>) -> Result<ImagePoni, BuildError>{
         let mut cbf = Cbf::open(cbffile).expect(&format!("couldn't open file: {cbffile:?}"));
         let flux = match cbf.header().get("# Flux "){
@@ -83,34 +111,6 @@ impl ImagePoni {
     }
 }
 
-fn strtounits(unitstr:Option<&str>)->Units{
-    let units = match unitstr{
-        None => Units::TwoTheta,
-        Some(s) => {match s{
-            "TwoTheta" => Units::TwoTheta,
-            "2theta" => Units::TwoTheta,
-            "QA" => Units::QA,
-            "Qnm" => Units::Qnm,
-            _ => {println!("couldn't interpret unit string, defaulting to 2theta");Units::TwoTheta},
-        }}
-    };
-    units
-}
-
-fn optiontostr(unito:Option<&str>)-> String{
-    let units = match unito {
-        None => "TwoTheta",
-        Some(s) => {match s{
-            "twotheta" | "2theta" | "TwoTheta" | "2Theta" => "TwoTheta",
-            "QA"|"Qa"|"qa" => "QA",
-            "Qnm"|"qnm" => "Qnm",
-            _ => {println!("couldn't interpret unit string, defaulting to TwoTheta");"TwoTheta"}
-
-        }}
-    };
-    String::from(units)
-}
-
 pub struct MultiFile{
     ilist :Vec<ImagePoni>,
     tthmin: f64,
@@ -123,8 +123,6 @@ pub struct MultiFile{
     units:String,
 
 }
-
-
 
 impl MultiFile{
 
@@ -184,11 +182,8 @@ impl MultiFile{
                                     dc = ptemp.detector_config;
                                     getdetconf = false;
                                 }
-                                let ip = match ImagePoni::build(&ponifile,&cbffile.clone(), dc.clone(),
-                                 usedmask){
-                                    Ok(ip) => ip,
-                                    Err(e) => return Err(e),
-                                };
+                                let ip = ImagePoni::build(&ponifile,&cbffile.clone(), dc.clone(),
+                                 usedmask)?;
                                 ilist.push(ip);
                                 break;
                             }
@@ -199,7 +194,6 @@ impl MultiFile{
                         eprintln!("build function requires at least 2 pairs of ponis and cbfs, found {nitems}. cbf and poni files must match in the base name");
                         return Err(BuildError)
                     };
-                    //let mut it = cbffiles.into_iter();
                     
                     Ok(MultiFile { ilist,  tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, units })
                 }
@@ -269,10 +263,7 @@ impl MultiFile{
                 .expect(&format!("couldn't create file: {}/{}",&outponidir,&outponistr));
                 file.write_all( poni.to_string().as_bytes()).unwrap();
             }
-            let ip = match ImagePoni::buildfromponi(poni, &f, usedmask){
-                Ok(i) => i,
-                Err(e) => return Err(e),
-            };
+            let ip = ImagePoni::buildfromponi(poni, &f, usedmask)?;
             ilist.push(ip);
         }
         if ilist.len() < 2{

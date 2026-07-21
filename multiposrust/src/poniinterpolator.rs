@@ -71,7 +71,6 @@ impl PoniList{
         for fresult in ponifiles{
             let fname = fresult.as_ref().unwrap();
             println!("{fname:?}");
-            //let f = String::from(fresult.as_ref().unwrap().file_name().unwrap().to_str().unwrap());
             let (yo,zo) = getyz(fname, ymotor, zmotor);
             let mut pyz = PoniYZ::new();
             match yo {
@@ -246,14 +245,6 @@ impl Interpolators<'_>{
         let nnrot2 = t.trot2.natural_neighbor();
         let nnrot3 = t.trot3.natural_neighbor();
         Interpolators { nnponi1, nnponi2, nndist, nnrot1, nnrot2, nnrot3 }
-
     }
 }
-
-
-
-
-
-
-
 
