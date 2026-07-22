@@ -17,7 +17,7 @@ pub struct Params{
     #[arg(short='c', long, default_value_t = 2.)]
     pub chimin : f64,
     /// maximum chi
-    #[arg(short='a', long, default_value_t= 358.)]
+    #[arg(long, default_value_t= 358.)]
     pub chimax : f64,
     /// number of chi bins
     #[arg(short='i', long, default_value_t= 357)]
@@ -29,13 +29,13 @@ pub struct Params{
     #[arg(short='d', long, default_value  = ".")]
     pub cbfdir: String,
     /// poni directory - only need most extreme positions and the rest will be interpolated
-    #[arg(short='o', long)]
+    #[arg(long)]
     pub ponidir: String,
     /// save individual cakes or not
-    #[arg(short, long)]
+    #[arg(long)]
     pub savecakes: bool,
     /// subdirectory to store cake file
-    #[arg(short='u', long, default_value="cakes")]
+    #[arg(long, default_value="cakes")]
     pub cakesubdir: String,
     /// mask file path (optional)
     #[arg(short, long, default_value=None)]
@@ -43,7 +43,7 @@ pub struct Params{
     /// cake mask path (optional)
     #[arg(short='k', long, default_value=None)]
     pub cakemaskfile: Option<String>,
-    /// directory for individual masks (matched with y and z positions)
+    /// directory for individual masks (optional, matched with y and z positions)
     #[arg(long, default_value=None)]
     pub maskdir: Option<String>,
     /// string pattern used to find poni files in directory (must include asterix)
@@ -56,13 +56,13 @@ pub struct Params{
     #[arg(long, default_value="dtz")]
     pub zmotor: String,
     /// do fluo subtraction or not
-    #[arg(short, long, default_value=None)]
+    #[arg(short, long, default_value_t=false)]
     pub fluosub: bool,
     /// fluok starting value
     #[arg(long, default_value_t=1.)]
     pub fluok0: f64,
     /// save individual ponis
-    #[arg(short, long, default_value=None)]
+    #[arg(long, default_value_t=false)]
     pub saveponis: bool,
     /// integration unit. Options TwoTheta/2Theta/2theta/twotheta, QA/qa, Qnm/qnm. 
     /// Will default to TwoTheta if invalid
@@ -88,7 +88,7 @@ pub struct ParamsFF{
     #[arg(short='c', long, default_value_t = 2.)]
     pub chimin : f64,
     /// maximum chi
-    #[arg(short='a', long, default_value_t= 358.)]
+    #[arg(long, default_value_t= 358.)]
     pub chimax : f64,
     /// polarization factor
     #[arg(short, long, default_value_t = 0.85)]
@@ -97,12 +97,12 @@ pub struct ParamsFF{
     #[arg(short='d', long, default_value  = ".")]
     pub cbfdir: String,
     /// poni directory - only need extreme detector positions and the rest will be interpolated
-    #[arg(short='o', long)]
+    #[arg(long)]
     pub ponidir: String,
     /// mask file path (optional)
     #[arg(short, long, default_value=None)]
     pub maskfile: Option<String>,
-    /// directory for individual masks (matched with y and z positions)
+    /// directory for individual masks (optional, matched with y and z positions)
     #[arg(long, default_value=None)]
     pub maskdir: Option<String>,
     /// minimum allowed flat field value
@@ -121,7 +121,7 @@ pub struct ParamsFF{
     #[arg(long, default_value="dtz")]
     pub zmotor: String,
     /// save individual ponis
-    #[arg(short, long, default_value=None)]
+    #[arg(long, default_value_t=false)]
     pub saveponis: bool,
     /// integration units, default 2theta. Options TwoTheta/2Theta/2theta/twotheta, QA/qa, Qnm/qnm. 
     /// Will default to TwoTheta if invalid
