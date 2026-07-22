@@ -1,8 +1,14 @@
-use clap::{Parser};
+use clap::{ Parser};
 
-/// program for processing X-ray scattering from multiple detector positions
+/// program for processing X-ray scattering from multiple detector positions.
+/// Images and poni files must contain detector positions in name separated by _. 
+/// e.g. <name>_<ymotor><ypos>_<zmotor><zpos>.cbf or <name>_<ymotor><ypos>_<zmotor><zpos>_<image number>.cbf
+
 #[derive(Parser,Debug)]
-#[command(version, about, long_about = None)]
+#[command(version,  about = concat!("program for processing X-ray scattering from multiple detector positions.\n",
+            "Images and poni files must contain detector positions in name separated by _.\n",
+            "e.g. <name>_<ymotor><ypos>_<zmotor><zpos>.cbf or <name>_<ymotor><ypos>_<zmotor><zpos>_<image number>.cbf"), 
+long_about=None)]
 pub struct Params{
     /// minimum 2theta
     #[arg(short, long)]
@@ -28,7 +34,7 @@ pub struct Params{
     /// cbf directory
     #[arg(short='d', long, default_value  = ".")]
     pub cbfdir: String,
-    /// poni directory - only need most extreme positions and the rest will be interpolated
+    /// poni directory - only need corner (convex hull) positions and the rest will be interpolated
     #[arg(long)]
     pub ponidir: String,
     /// save individual cakes or not
@@ -49,11 +55,11 @@ pub struct Params{
     /// string pattern used to find poni files in directory (must include asterix)
     #[arg(long, default_value="*.poni")]
     pub ponipattern: String,
-    /// ymotor name used to find detector y position in file name (format ..._<ymotor>yyy.yy_<zmotor>zzz.zz_...)
-    #[arg(long, default_value="dty")]
+    #[arg(long, default_value="dty", help = concat!("ymotor name used to find detector y position in file name\n",
+    "(format ..._<ymotor>yyy.yy_<zmotor>zzz.zz_...)"))]
     pub ymotor: String,
-    /// z motor name used to find detector z position in file name (format ..._<ymotor>yyy.yy_<zmotor>zzz.zz_...)
-    #[arg(long, default_value="dtz")]
+    #[arg(long, default_value="dtz", help = concat!("z motor name used to find detector z position in file name\n",
+    "(format ..._<ymotor>yyy.yy_<zmotor>zzz.zz_...)"))]
     pub zmotor: String,
     /// do fluo subtraction or not
     #[arg(short, long, default_value_t=false)]
@@ -64,9 +70,8 @@ pub struct Params{
     /// save individual ponis
     #[arg(long, default_value_t=false)]
     pub saveponis: bool,
-    /// integration unit. Options TwoTheta/2Theta/2theta/twotheta, QA/qa, Qnm/qnm. 
-    /// Will default to TwoTheta if invalid
-    #[arg(short, long, default_value="TwoTheta")]
+    #[arg(short, long, default_value="TwoTheta", 
+    help = "integration unit. Options TwoTheta/2Theta/2theta/twotheta, QA/qa, Qnm/qnm.\nWill default to TwoTheta if invalid")]
     pub unit: String,
 
 }

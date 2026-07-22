@@ -463,7 +463,7 @@ impl MultiFile{
         let out1d = format!("{outdir}/ff1d.xy");
         save1d(out1d, &tthrange, &tthav, None);
         println!("\npattern calculated");
-
+        println!("calculating flat-field");
         let cbfsize = self.ilist[0].cbf.array().data().len();
         let dim1 = self.ilist[0].cbf.dim1();
         let dim2 = self.ilist[0].cbf.dim2();

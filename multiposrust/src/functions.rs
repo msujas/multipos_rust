@@ -166,13 +166,11 @@ pub fn closestindexordered(orderedvec: &Vec<f64>, value: f64)->usize{
     let mut i0:usize = 0;
     let mut i = size/2;
     let mut iend = size-1;
-
     let mut midvalue = orderedvec[i];
     loop {
         if value < midvalue{
             iend = i;
-            i = (i + i0)/2;
-            
+            i = (i + i0)/2;    
         }
         else {
             i0 = i;
