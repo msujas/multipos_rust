@@ -3,8 +3,9 @@ use std::process::exit;
 use std::{time::Instant};
 use clap::Parser;
 use multiposrust::MultiFile;
-use multiposrust::params::Params;
+use crate::params::Params;
 
+mod params;
 
 fn main() {
     let now = Instant::now();

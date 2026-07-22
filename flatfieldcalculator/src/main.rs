@@ -3,7 +3,10 @@ use std::{path::Path, time::Instant};
 use clap::Parser;
 use multiposrust::MultiFile;
 
-use multiposrust::params::ParamsFF;
+use crate::params::ParamsFF;
+
+mod params;
+
 
 fn main(){
     let ap = ParamsFF::parse();

@@ -15,7 +15,6 @@ use crate::{functions::yzcompare, poniinterpolator::{Interpolators, PoniList}};
 #[derive(Debug)]
 pub struct BuildError;
 
-pub mod params;
 mod functions;
 pub mod poniinterpolator;
 pub struct ImagePoni{
