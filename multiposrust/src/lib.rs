@@ -397,7 +397,8 @@ impl MultiFile{
         let _ = create_dir(&fsdir);
         let fname = format!("{}/avcake.edf", &fsdir);
         let fname1d = format!("{}/avcake.xye", &fsdir);
-        newcake.store(fname, None).unwrap();
+        println!("saving fluo sub cake to {}",&fname);
+        newcake.store(&fname, None).unwrap();
         let av1d = &newcake.radial.intensity;
         let tth = &newcake.radial.positions.to_vec();
         let sigma = &newcake.radial.sigma;

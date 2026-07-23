@@ -1,9 +1,5 @@
 use clap::{ Parser};
 
-/// program for processing X-ray scattering from multiple detector positions.
-/// Images and poni files must contain detector positions in name separated by _. 
-/// e.g. <name>_<ymotor><ypos>_<zmotor><zpos>.cbf or <name>_<ymotor><ypos>_<zmotor><zpos>_<image number>.cbf
-
 #[derive(Parser,Debug)]
 #[command(version,  about = concat!("program for processing X-ray scattering from multiple detector positions.\n",
             "Images and poni files must contain detector positions in name separated by _.\n",
