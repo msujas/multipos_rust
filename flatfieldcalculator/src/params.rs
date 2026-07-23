@@ -3,9 +3,16 @@ use clap::{Parser};
 #[derive(Parser,Debug)]
 #[command(version, about = concat!("program for calculating flat field given cbfs from multiple detector positions.\n",
             "Images and poni files must contain detector positions in name separated by _. \n",
-             "e.g. <name>_<ymotor><ypos>_<zmotor><zpos>.cbf or <name>_<ymotor><ypos>_<zmotor><zpos>_<image number>.cbf"), 
+             "e.g. <name>_<ymotor><ypos>_<zmotor><zpos>.cbf or <name>_<ymotor><ypos>_<zmotor><zpos>_<image number>.cbf\n",
+             "Poni files only required for corner positions (convex hull) of measurement grid. The rest are interpolated."), 
 long_about = None)]
 pub struct ParamsFF{
+    /// cbf directory
+    #[arg(short='d', long, default_value  = ".")]
+    pub cbfdir: String,
+    /// poni directory - only need corner (convex hull) detector positions and the rest will be interpolated
+    #[arg(long)]
+    pub ponidir: String,
     /// minimum 2theta
     #[arg(short, long)]
     pub tthmin : f64,
@@ -24,13 +31,7 @@ pub struct ParamsFF{
     /// polarization factor
     #[arg(short, long, default_value_t = 0.85)]
     pub pfactor: f64,
-    /// cbf directory
-    #[arg(short='d', long, default_value  = ".")]
-    pub cbfdir: String,
-    /// poni directory - only need corner (convex hull) detector positions and the rest will be interpolated
-    #[arg(long)]
-    pub ponidir: String,
-    /// mask file path (optional)
+    /// default mask file path (optional)
     #[arg(short, long, default_value=None)]
     pub maskfile: Option<String>,
     /// directory for individual masks (optional, matched with y and z positions)

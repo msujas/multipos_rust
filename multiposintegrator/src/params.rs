@@ -3,9 +3,16 @@ use clap::{ Parser};
 #[derive(Parser,Debug)]
 #[command(version,  about = concat!("program for processing X-ray scattering from multiple detector positions.\n",
             "Images and poni files must contain detector positions in name separated by _.\n",
-            "e.g. <name>_<ymotor><ypos>_<zmotor><zpos>.cbf or <name>_<ymotor><ypos>_<zmotor><zpos>_<image number>.cbf"), 
+            "e.g. <name>_<ymotor><ypos>_<zmotor><zpos>.cbf or <name>_<ymotor><ypos>_<zmotor><zpos>_<image number>.cbf\n",
+            "Poni files only required for corner positions (convex hull) of measurement grid. The rest are interpolated."),
 long_about=None)]
 pub struct Params{
+    /// cbf directory
+    #[arg(short='d', long, default_value  = ".")]
+    pub cbfdir: String,
+    /// poni directory - only need corner (convex hull) positions and the rest will be interpolated
+    #[arg(long)]
+    pub ponidir: String,
     /// minimum 2theta
     #[arg(short, long)]
     pub tthmin : f64,
@@ -22,32 +29,26 @@ pub struct Params{
     #[arg(long, default_value_t= 358.)]
     pub chimax : f64,
     /// number of chi bins
-    #[arg(short='i', long, default_value_t= 357)]
+    #[arg(short='i', long, default_value_t= 356)]
     pub chibins : usize,
     /// polarization factor
     #[arg(short, long, default_value_t = 0.85)]
     pub pfactor: f64,
-    /// cbf directory
-    #[arg(short='d', long, default_value  = ".")]
-    pub cbfdir: String,
-    /// poni directory - only need corner (convex hull) positions and the rest will be interpolated
-    #[arg(long)]
-    pub ponidir: String,
+    /// default mask file path (optional)
+    #[arg(short, long, default_value=None)]
+    pub maskfile: Option<String>,
+    /// directory for individual masks (optional, matched with y and z positions)
+    #[arg(long, default_value=None)]
+    pub maskdir: Option<String>,
     /// save individual cakes or not
     #[arg(long)]
     pub savecakes: bool,
     /// subdirectory to store cake file
     #[arg(long, default_value="cakes")]
     pub cakesubdir: String,
-    /// mask file path (optional)
-    #[arg(short, long, default_value=None)]
-    pub maskfile: Option<String>,
     /// cake mask path (optional)
     #[arg(short='k', long, default_value=None)]
     pub cakemaskfile: Option<String>,
-    /// directory for individual masks (optional, matched with y and z positions)
-    #[arg(long, default_value=None)]
-    pub maskdir: Option<String>,
     /// string pattern used to find poni files in directory (must include asterix)
     #[arg(long, default_value="*.poni")]
     pub ponipattern: String,

@@ -3,7 +3,9 @@ A rewrite of the Python multi position total-scattering processing library (http
 Includes library and executables for integrating data and calculating flat-fields. The executables are called multiposintegrator for the integration program, and flatfieldcalculator for the program calculating flat fields. For the flat fields it is best to use data from an amorphous scatterer such as glass. Data can be measured from an arbitrary number of positions.
 
 Instructions:
-The programs rely on reading the detector y- and z-positions from the file names. Input a path containing the cbf files and one containing the poni files. The poni files must contain all the corner positions (convex hull), the rest can be interpolated e.g. here y and z motors are called dty and dtz respectively
+The programs rely on reading the detector y- and z-positions from the file names. Input a path containing the cbf files and one containing the poni files. The poni files must contain all the corner positions (convex hull), the rest can be interpolated. 
+
+Example of file structure here, y and z motors are called dty and dtz respectively
 
 ```
 |-path 
@@ -22,6 +24,10 @@ The programs rely on reading the detector y- and z-positions from the file names
       |-dty390.00_dtz140.00.poni
       |-...
 ```
+
+Example measurement layout - measurements done along red lines, ponis required on blue dots, though others can be calibrated in the middle.
+
+<img src="images/measurement_diagram.png" width="300"/>
 
 Maybe most convenient to run in a batch/shell script. E.g. for multiple subdirs (Windows .bat)
 
