@@ -1,5 +1,5 @@
 use chrono::{DateTime, Datelike, Local};
-use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, Header, HeaderEntry::{self, Float}}, poni::{DetectorConfig, Poni}};
+use cryiorust::{edf::{self, Edf}, frame::{ Array, Frame, Header, HeaderEntry::{self}}, poni::{DetectorConfig, Poni}};
 use fluosubtraction_rust::functions::fluosub_curvefit;
 use integrustio::{ geometry::{IntoGeometry, Units::{self}}, integrator::{Cake, Integrator, KEY_BUBBLE_MADE}};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
@@ -456,16 +456,16 @@ impl MultiFile{
         let mut tthindexvec : Vec<Vec<i32>> = Vec::new();
         let deg = 180./PI;
         println!("calculating 1d pattern");
-        let cbf0 = &self.ilist[0].cbf;
-        let dim1 = cbf0.dim1();
-        let dim2 = cbf0.dim2();
+        let a0 = &self.ilist[0].normalisedarray;
+        let dim1 = a0.dim1();
+        let dim2 = a0.dim2();
         let scale = 1e7;
         println!("dim1: {dim1}, dim2: {dim2}");
         for (n,ip) in self.ilist.iter().enumerate(){
             tthindexvec.push(Vec::new());
             let geo = ip.poni.geometry(&Units::TwoTheta, self.pfactor, 0., 0.);
             
-            let data = ip.cbf.array().data();    
+            let data = ip.normalisedarray.data();    
             
             print!("{n}, ");
             io::stdout().flush().unwrap();
@@ -499,9 +499,9 @@ impl MultiFile{
         save1d(out1d, &tthrange, &tthav, None);
         println!("\npattern calculated");
         println!("calculating flat-field");
-        let cbfsize = self.ilist[0].cbf.array().data().len();
-        let dim1 = self.ilist[0].cbf.dim1();
-        let dim2 = self.ilist[0].cbf.dim2();
+        let cbfsize = self.ilist[0].normalisedarray.data().len();
+        let dim1 = self.ilist[0].normalisedarray.dim1();
+        let dim2 = self.ilist[0].normalisedarray.dim2();
 
         let mut gainsum : Vec<f64> = vec![0.;cbfsize];
         let mut gaindiv : Vec<f64> = vec![0.;cbfsize];
@@ -509,7 +509,7 @@ impl MultiFile{
         //println!("{tthindexvec:?}");
         for (ip, tthiv) in self.ilist.iter().zip(tthindexvec.iter()){
             let geo = ip.poni.geometry(&Units::TwoTheta, self.pfactor, 0., 0.);
-            let data = ip.cbf.array().data();
+            let data = ip.normalisedarray.data();
             for (i, (pix, tthi)) in data.iter().zip(tthiv).enumerate(){
                 let y = i / dim2;
                 let x = i % dim2;
