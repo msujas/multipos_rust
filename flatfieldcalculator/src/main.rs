@@ -37,7 +37,7 @@ fn main(){
     };
     let now = Instant::now();
     let mf = match MultiFile::buildinterpolate(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, 
-        chibins, pfactor,maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis, Some(&unit)){
+        chibins, pfactor,maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis, Some(&unit), None){
             Ok(m) => m,
             Err(_e) => {eprintln!("error. Exiting"); exit(1)}
          };

@@ -1,6 +1,5 @@
 use chrono::{DateTime, Datelike, Local};
-use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, Header, HeaderEntry::{self, Float}}, 
-poni::{DetectorConfig, Poni}};
+use cryiorust::{cbf::Cbf, edf::{self, Edf}, frame::{ Array, Frame, Header, HeaderEntry::{self, Float}}, poni::{DetectorConfig, Poni}};
 use fluosubtraction_rust::functions::fluosub_curvefit;
 use integrustio::{ geometry::{IntoGeometry, Units::{self}}, integrator::{Cake, Integrator, KEY_BUBBLE_MADE}};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
@@ -10,16 +9,19 @@ sync::Arc, vec};
 use glob::{ glob};
 use functions::{save1d, cakeav, getmedian, closestindexordered,getyz};
 
-use crate::{functions::yzcompare, poniinterpolator::{Interpolators, PoniList}};
+use crate::{functions::yzcompare, imagereader::ImageFlux, poniinterpolator::{Interpolators, PoniList}};
 
 #[derive(Debug)]
 pub struct BuildError;
 
 mod functions;
 pub mod poniinterpolator;
+mod imagereader;
+
 pub struct ImagePoni{
+    pub namestem: String,
     pub poni:Poni,
-    pub cbf:Cbf,
+    pub normalisedarray:Array,
 }
 
 fn strtounits(unitstr:Option<&str>)->Units{
@@ -50,32 +52,48 @@ fn optiontostr(unito:Option<&str>)-> String{
     String::from(units)
 }
 
-fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>) -> Result<ImagePoni, BuildError>{
-        let mut cbf = Cbf::open(cbffile).expect(&format!("couldn't open file: {cbffile:?}"));
-        let flux = match cbf.header().get("# Flux "){
-            Some(Float(f64)) => f64.clone(),
-            _ => {eprintln!("couldn\'t find flux for {cbffile:?}");
-                return Err(BuildError)},
+fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Array>) -> Result<ImagePoni, BuildError>{
+
+        let imf = match ImageFlux::readimage(cbffile){
+            Err(_e) => return Err(BuildError),
+            Ok(i) => i,
         };
+        let flux = imf.flux;
+        let dim1 = imf.array.dim1();
+        let dim2 = imf.array.dim2();
+        let name = imf.namestem;
+        let ff:&Array = match flatfield{
+            None => &Array::with_data(dim1, dim2, vec![1.;dim1*dim2]),
+            Some(a) => a,
+        };
+        let mut domask:bool;
+        let mut datavec : Vec<f64> = Vec::new();
         if let Some(mask) = mask{
-            for (i , m) in cbf.array_mut().data_mut().iter_mut().zip(mask.data().iter()){
-                *i = *i/ flux;
-                if *m > 0. {
-                    *i = -1.;
+            let mut x: f64;
+            for ((i , m),f) in imf.array.data().iter().zip(mask.data().iter()).zip(ff.data().iter()){
+                domask = (*i < 0.) | (*m > 0.) | (*f<0.);
+                if domask{
+                    datavec.push(-1.);
+                    continue;
                 }
+                x = *i/ flux;
+                x = x / f;
+                datavec.push(x);
             }
         }
-        Ok(ImagePoni { poni, cbf })
+        let normalisedarray = Array::with_data(dim1, dim2, datavec);
+
+        Ok(ImagePoni {namestem: name , poni, normalisedarray })
     }
 
 impl ImagePoni {
-    pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>, mask: Option<&Array>) -> Result<ImagePoni, BuildError>{
+    pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>, mask: Option<&Array>, flatfield: Option<&Array>) -> Result<ImagePoni, BuildError>{
         let poni = Poni::open(ponifile, dc).unwrap() ;
-        buildip(poni, cbffile, mask)
+        buildip(poni, cbffile, mask, flatfield)
     }
 
-    pub fn buildfromponi(poni:Poni, cbffile: &Path,mask: Option<&Array>) -> Result<ImagePoni, BuildError>{
-        buildip(poni, cbffile, mask)
+    pub fn buildfromponi(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Array>) -> Result<ImagePoni, BuildError>{
+        buildip(poni, cbffile, mask, flatfield)
     }
 
     pub fn integrate(self, tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
@@ -90,14 +108,14 @@ impl ImagePoni {
         i.set_azimuthal_range(Some((chimin,chimax)));
         i.set_radial_range(Some((tthmin,tthmax)));
         i.set_solid_angle(true, true);
-        i.init(self.cbf.array());
-        let (cake, _) = i.integrate_cake(self.cbf.array()).unwrap();
+        i.init(&self.normalisedarray);
+        let (cake, _) = i.integrate_cake(&self.normalisedarray).unwrap();
         cake
     }
 
     pub fn get_cake(self,tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
                 chibins: usize, pfactor: f64, cakedir:Option<&String>, units:&str )->Cake{
-        let mut fname = self.cbf.name().to_string();
+        let mut fname = self.namestem.clone();
         fname.push_str(".edf");
         let cake = self.integrate(tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, units);
         
@@ -127,7 +145,7 @@ impl MultiFile{
 
     pub fn build(cbfdir:&String, ponidir: &String, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
                 chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, unit:Option<&str>, ymotor:&String,
-            zmotor:&String) -> Result<MultiFile,BuildError> {
+            zmotor:&String, flatfieldfile: Option<&Path>) -> Result<MultiFile,BuildError> {
                     //let units = strtoUnits(units);
                     let units = optiontostr(unit);
                     let mut dc: Option<Arc<DetectorConfig>> = None;
@@ -137,9 +155,17 @@ impl MultiFile{
                     let binding: edf::Edf;
                     let mask: Option<&Array> = match maskfile {
                         None => None,
-                        Some(f) => {binding = edf::Edf::open(f)
-                                          .expect(format!("couldn't open or find mask file {f:?}").as_str());
-                                          Some(binding.array())},
+                        Some(f) => {if !f.exists(){eprintln!("couldn't find mask file {f:?}");return Err(BuildError)};
+                            binding = edf::Edf::open(f)
+                            .expect(&format!("couldn't open or find mask file {f:?}"));
+                            Some(binding.array())},
+                    };
+                    let ffbinding : edf::Edf;
+                    let flatfield = match flatfieldfile {
+                        None => None,
+                        Some(f) => {if !f.exists(){eprintln!("couldn't find flat field file {f:?}"); return Err(BuildError);};
+                            ffbinding = Edf::open(f).expect(format!("couldn't open flat field file: {f:?}").as_str());
+                                          Some(ffbinding.array())}
                     };
                     let mut usedmask : Option<&Array> = mask.clone();
                     let mut ilist:Vec<ImagePoni> = Vec::new();
@@ -182,7 +208,7 @@ impl MultiFile{
                                     getdetconf = false;
                                 }
                                 let ip = ImagePoni::build(&ponifile,&cbffile.clone(), dc.clone(),
-                                 usedmask)?;
+                                 usedmask, flatfield)?;
                                 ilist.push(ip);
                                 break;
                             }
@@ -199,7 +225,7 @@ impl MultiFile{
 
     pub fn buildinterpolate(cbfdir:&String, ponidir: &String,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
         chibins:usize,pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, ponipattern:&String, ymotor:&String, 
-        zmotor:&String,saveponis:bool, unit:Option<&str>)-> Result<MultiFile, BuildError>{
+        zmotor:&String,saveponis:bool, unit:Option<&str>, flatfieldfile: Option<&Path>)-> Result<MultiFile, BuildError>{
         let units = optiontostr(unit);
         let plist = PoniList::build(ponidir, ponipattern, ymotor, zmotor);
         let p0 = plist.ponilist[0].poni.clone();
@@ -212,8 +238,16 @@ impl MultiFile{
         let binding: Edf;
         let mask: Option<&Array> = match maskfile {
             None => None,
-            Some(f) => {binding = edf::Edf::open(f).expect(&format!("couldn't find mask file {f:?}"));
-                                Some(binding.array())},
+            Some(f) => {if !f.exists(){eprintln!("couldn't find mask file {f:?}"); return Err(BuildError);};
+                binding = edf::Edf::open(f).expect(&format!("couldn't find mask file {f:?}"));
+                Some(binding.array())},
+        };
+        let ffbinding:Edf;
+        let flatfield = match flatfieldfile {
+            None => None,
+            Some(f) => {if !f.exists(){eprintln!("couldn't find flat-field file {f:?}");return Err(BuildError)};
+                ffbinding = Edf::open(f).expect(&format!("couldn't open flat field file {f:?}"));
+                Some(ffbinding.array())}
         };
         let cbffiles = glob(&cbfpattern).unwrap();
         let mut usedmask = mask.clone();
@@ -262,7 +296,7 @@ impl MultiFile{
                 .expect(&format!("couldn't create file: {}/{}",&outponidir,&outponistr));
                 file.write_all( poni.to_string().as_bytes()).unwrap();
             }
-            let ip = ImagePoni::buildfromponi(poni, &f, usedmask)?;
+            let ip = ImagePoni::buildfromponi(poni, &f, usedmask, flatfield)?;
             ilist.push(ip);
         }
         if ilist.len() < 2{
@@ -545,7 +579,7 @@ mod tests{
         let ymotor = String::from("dty");
         let zmotor = String::from("dtz");
         let _mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
-            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor).unwrap();
+            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor, None).unwrap();
 
     }
 

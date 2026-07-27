@@ -1,7 +1,7 @@
 use clap::{ Parser};
 
 #[derive(Parser,Debug)]
-#[command(version,  about = concat!("program for processing X-ray scattering from multiple detector positions.\n",
+#[command(version,  about = concat!("Program for processing X-ray scattering from multiple detector positions.\n",
             "Images and poni files must contain detector positions in name separated by _.\n",
             "e.g. <name>_<ymotor><ypos>_<zmotor><zpos>.cbf or <name>_<ymotor><ypos>_<zmotor><zpos>_<image number>.cbf\n",
             "Poni files only required for corner positions (convex hull) of measurement grid. The rest are interpolated."),
@@ -70,5 +70,7 @@ pub struct Params{
     #[arg(short, long, default_value="TwoTheta", 
     help = "integration unit. Options TwoTheta/2Theta/2theta/twotheta, QA/qa, Qnm/qnm.\nWill default to TwoTheta if invalid")]
     pub unit: String,
-
+    /// flat-field file (optional)
+    #[arg(long, default_value=None)]
+    pub flatfieldfile: Option<String>,
 }

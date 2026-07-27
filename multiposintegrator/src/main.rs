@@ -32,6 +32,7 @@ fn main() {
     let fluok0 = ap.fluok0;
     let saveponis = ap.saveponis;
     let unit = ap.unit;
+    let flatfieldfileo = ap.flatfieldfile;
 
     let tmp:String;
     let maskfile: Option<&Path> = match maskfilestr {
@@ -40,6 +41,11 @@ fn main() {
                         Some(Path::new(&tmp))},
     };
 
+    let tmpff: String;
+    let flatfieldfile = match flatfieldfileo{
+        None => None,
+        Some(s) => {tmpff=s;Some(Path::new(&tmpff))},
+    };
     
     let cakedir = match savecakes {
         true => Some(&format!("{cbfdir}/{subdir}")),
@@ -47,7 +53,7 @@ fn main() {
     };
     
     let mf = match MultiFile::buildinterpolate(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
-        pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis, Some(&unit)){
+        pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis, Some(&unit), flatfieldfile){
             Ok(m) => m,
             Err(_e) => {eprintln!("exiting"); exit(1)}
         };

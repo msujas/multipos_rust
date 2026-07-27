@@ -1,7 +1,7 @@
 use clap::{Parser};
 
 #[derive(Parser,Debug)]
-#[command(version, about = concat!("program for calculating flat field given cbfs from multiple detector positions.\n",
+#[command(version, about = concat!("Program for calculating flat field given cbfs from multiple detector positions.\n",
             "Images and poni files must contain detector positions in name separated by _. \n",
              "e.g. <name>_<ymotor><ypos>_<zmotor><zpos>.cbf or <name>_<ymotor><ypos>_<zmotor><zpos>_<image number>.cbf\n",
              "Poni files only required for corner positions (convex hull) of measurement grid. The rest are interpolated."), 

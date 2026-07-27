@@ -5,6 +5,8 @@ Includes library and executables for integrating data and calculating flat-field
 Instructions:
 The programs rely on reading the detector y- and z-positions from the file names. Input a path containing the cbf files and one containing the poni files. The poni files must contain all the corner positions (convex hull), the rest can be interpolated. 
 
+Flux required in cbf headers as '# Flux ...'.
+
 Example of file structure here, y and z motors are called dty and dtz respectively
 
 ```
@@ -25,7 +27,7 @@ Example of file structure here, y and z motors are called dty and dtz respective
       |-...
 ```
 
-Example measurement layout - measurements done along red lines, ponis required on blue dots, though others can be calibrated in the middle.
+Example measurement layout - measurements done along red lines, ponis required on cyan dots, though others can be calibrated in the middle.
 
 <img src="images/measurement_diagram.png" width="300"/>
 
