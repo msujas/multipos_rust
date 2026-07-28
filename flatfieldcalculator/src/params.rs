@@ -58,4 +58,7 @@ pub struct ParamsFF{
     #[arg(short, long, default_value="TwoTheta", 
     help = "integration unit. Options TwoTheta/2Theta/2theta/twotheta, QA/qa, Qnm/qnm.\nWill default to TwoTheta if invalid")]
     pub unit: String,
+    /// flux (monitor) header entry (default "# Flux " for cbf, "Flux" for edf)
+    #[arg(long, default_value=None)]
+    pub fluxentry: Option<String>,
 }

@@ -27,6 +27,7 @@ fn main(){
     let zmotor = &ap.zmotor;
     let saveponis = ap.saveponis;
     let unit = ap.unit;
+    let fluxentry = ap.fluxentry;
 
     let chibins = 50; //not used for calculating the flat field, but needed to make MultiFile object
     let tmp: String;
@@ -37,7 +38,7 @@ fn main(){
     };
     let now = Instant::now();
     let mf = match MultiFile::buildinterpolate(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, 
-        chibins, pfactor,maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis, Some(&unit), None){
+        chibins, pfactor,maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis, Some(&unit), None, fluxentry){
             Ok(m) => m,
             Err(_e) => {eprintln!("error. Exiting"); exit(1)}
          };

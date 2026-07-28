@@ -52,9 +52,9 @@ fn optiontostr(unito:Option<&str>)-> String{
     String::from(units)
 }
 
-fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Array>) -> Result<ImagePoni, BuildError>{
+fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Array>, fluxentry: &Option<String>) -> Result<ImagePoni, BuildError>{
 
-        let imf = match ImageFlux::readimage(cbffile){
+        let imf = match ImageFlux::readimage(cbffile, &fluxentry){
             Err(_e) => return Err(BuildError),
             Ok(i) => i,
         };
@@ -87,13 +87,14 @@ fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Ar
     }
 
 impl ImagePoni {
-    pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>, mask: Option<&Array>, flatfield: Option<&Array>) -> Result<ImagePoni, BuildError>{
+    pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>, mask: Option<&Array>, flatfield: Option<&Array>,
+    fluxentry: Option<String>) -> Result<ImagePoni, BuildError>{
         let poni = Poni::open(ponifile, dc).unwrap() ;
-        buildip(poni, cbffile, mask, flatfield)
+        buildip(poni, cbffile, mask, flatfield,&fluxentry)
     }
 
-    pub fn buildfromponi(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Array>) -> Result<ImagePoni, BuildError>{
-        buildip(poni, cbffile, mask, flatfield)
+    pub fn buildfromponi(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Array>, fluxentry: &Option<String>) -> Result<ImagePoni, BuildError>{
+        buildip(poni, cbffile, mask, flatfield, fluxentry)
     }
 
     pub fn integrate(self, tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
@@ -145,7 +146,7 @@ impl MultiFile{
 
     pub fn build(cbfdir:&String, ponidir: &String, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
                 chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, unit:Option<&str>, ymotor:&String,
-            zmotor:&String, flatfieldfile: Option<&Path>) -> Result<MultiFile,BuildError> {
+            zmotor:&String, flatfieldfile: Option<&Path>, fluxentry: Option<String>) -> Result<MultiFile,BuildError> {
                     //let units = strtoUnits(units);
                     let units = optiontostr(unit);
                     let mut dc: Option<Arc<DetectorConfig>> = None;
@@ -208,7 +209,7 @@ impl MultiFile{
                                     getdetconf = false;
                                 }
                                 let ip = ImagePoni::build(&ponifile,&cbffile.clone(), dc.clone(),
-                                 usedmask, flatfield)?;
+                                 usedmask, flatfield, fluxentry.clone())?;
                                 ilist.push(ip);
                                 break;
                             }
@@ -225,7 +226,8 @@ impl MultiFile{
 
     pub fn buildinterpolate(cbfdir:&String, ponidir: &String,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
         chibins:usize,pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, ponipattern:&String, ymotor:&String, 
-        zmotor:&String,saveponis:bool, unit:Option<&str>, flatfieldfile: Option<&Path>)-> Result<MultiFile, BuildError>{
+        zmotor:&String,saveponis:bool, unit:Option<&str>, flatfieldfile: Option<&Path>,
+        fluxentry: Option<String>)-> Result<MultiFile, BuildError>{
         let units = optiontostr(unit);
         let plist = PoniList::build(ponidir, ponipattern, ymotor, zmotor);
         let p0 = plist.ponilist[0].poni.clone();
@@ -296,7 +298,7 @@ impl MultiFile{
                 .expect(&format!("couldn't create file: {}/{}",&outponidir,&outponistr));
                 file.write_all( poni.to_string().as_bytes()).unwrap();
             }
-            let ip = ImagePoni::buildfromponi(poni, &f, usedmask, flatfield)?;
+            let ip = ImagePoni::buildfromponi(poni, &f, usedmask, flatfield, &fluxentry)?;
             ilist.push(ip);
         }
         if ilist.len() < 2{
@@ -579,7 +581,7 @@ mod tests{
         let ymotor = String::from("dty");
         let zmotor = String::from("dtz");
         let _mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
-            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor, None).unwrap();
+            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor, None, Some(String::from("# Flux "))).unwrap();
 
     }
 

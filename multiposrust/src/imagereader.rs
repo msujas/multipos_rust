@@ -34,14 +34,20 @@ pub struct ImageFlux{
 }
 
 impl ImageFlux{
-    pub fn readimage(imagefile: &Path)-> Result<ImageFlux, ImageReadError>{
+    pub fn readimage(imagefile: &Path, fluxentry: &Option<String>)-> Result<ImageFlux, ImageReadError>{
         let extension = ImageFormat::fromfilename(imagefile)?;
         let c: Cbf;
         let e: Edf;
         let ei: Eiger;
         let dim1: usize;
         let dim2: usize;
-        let fluxheaderstring = "# Flux ";
+        
+        let fluxheaderstring = match fluxentry{
+            None => match extension {
+                        ImageFormat::Cbf | ImageFormat::Eiger =>"# Flux ",
+                        ImageFormat::Edf => "Flux"}
+            Some(s) => &s.clone(),
+        };
         let name = String::from(imagefile.file_stem().unwrap().to_str().unwrap());
         let fluxo: Option<&cryiorust::frame::HeaderEntry>;
         let im = match extension{
@@ -58,7 +64,7 @@ impl ImageFlux{
                                                                     Ok(ed)=> ed};
                                 dim1 = e.dim1();
                                 dim2 = e.dim2();
-                                fluxo = e.header().get(fluxheaderstring);
+                                fluxo = e.header().get("Flux");
                                 e.array().data().clone()},
             ImageFormat::Eiger => {ei = match Eiger::open(imagefile){Err(_e) =>{ eprintln!("couldn't open {imagefile:?} as hdf5");
                                                                                                 return Err(ImageReadError)},
@@ -70,7 +76,7 @@ impl ImageFlux{
         };
         let flux = match fluxo {
             Some(Float(f)) => f.clone(),
-            _ => return Err(ImageReadError),
+            _ => {eprintln!("couldn't get flux value from {imagefile:?}"); return Err(ImageReadError)},
             
         };
 

@@ -33,6 +33,7 @@ fn main() {
     let saveponis = ap.saveponis;
     let unit = ap.unit;
     let flatfieldfileo = ap.flatfieldfile;
+    let fluxentry = ap.fluxentry;
 
     let tmp:String;
     let maskfile: Option<&Path> = match maskfilestr {
@@ -53,7 +54,7 @@ fn main() {
     };
     
     let mf = match MultiFile::buildinterpolate(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
-        pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis, Some(&unit), flatfieldfile){
+        pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis, Some(&unit), flatfieldfile, fluxentry){
             Ok(m) => m,
             Err(_e) => {eprintln!("exiting"); exit(1)}
         };
