@@ -581,7 +581,7 @@ mod tests{
         let ymotor = String::from("dty");
         let zmotor = String::from("dtz");
         let _mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
-            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor, None, Some(String::from("# Flux "))).unwrap();
+            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor, None, Some(String::from("noflux"))).unwrap();
 
     }
 

@@ -1,5 +1,5 @@
 use std::path::Path;
-use cryiorust::{cbf::Cbf, edf::Edf, eiger::Eiger, frame::{Array, Frame, HeaderEntry::Float}};
+use cryiorust::{cbf::Cbf, edf::Edf, eiger::Eiger, frame::{Array, Frame, HeaderEntry::{self, Float, Number}}};
 
 
 #[derive(Debug)]
@@ -48,8 +48,11 @@ impl ImageFlux{
                         ImageFormat::Edf => "Flux"}
             Some(s) => &s.clone(),
         };
+
+        let readflux = fluxheaderstring != "noflux";
         let name = String::from(imagefile.file_stem().unwrap().to_str().unwrap());
         let fluxo: Option<&cryiorust::frame::HeaderEntry>;
+
         let im = match extension{
             ImageFormat::Cbf => {c = match Cbf::open(imagefile){Err(_e) => {eprintln!("couldn't open image: {imagefile:?} as cbf"); 
                                                                                             return Err(ImageReadError)},
@@ -74,10 +77,16 @@ impl ImageFlux{
                                     fluxo = ei.header().get(fluxheaderstring);
                                     ei.array().data().clone()},
         };
+
         let flux = match fluxo {
             Some(Float(f)) => f.clone(),
-            _ => {eprintln!("couldn't get flux value from {imagefile:?}"); return Err(ImageReadError)},
-            
+            Some(Number(i)) => i.clone() as f64,
+            Some(HeaderEntry::String(s)) => match s.clone().parse::<f64>(){
+                                                        Ok(r) => r,
+                                                        Err(_e) => {eprintln!("couldn't convert flux value from string from file {imagefile:?}"); 
+                                                                                    return Err(ImageReadError)},}
+            _ => match readflux{true => {eprintln!("couldn't get flux value from {imagefile:?}"); return Err(ImageReadError)},
+                                false => 1.},
         };
 
         let array = Array::with_data(dim1, dim2, im);
