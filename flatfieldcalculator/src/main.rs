@@ -2,6 +2,7 @@ use std::process::exit;
 use std::{path::Path, time::Instant};
 use clap::Parser;
 use multiposrust::MultiFile;
+use multiposrust::imagereader::ImageFormat;
 
 use crate::params::ParamsFF;
 
@@ -28,6 +29,12 @@ fn main(){
     let saveponis = ap.saveponis;
     let unit = ap.unit;
     let fluxentry = ap.fluxentry;
+    let fileextension = ap.fileextension;
+
+    let imageformat = match ImageFormat::fromextension(fileextension){
+        Ok(i) => i,
+        Err(_e) => {eprintln!("Exiting"); exit(2)},
+    };
 
     let chibins = 50; //not used for calculating the flat field, but needed to make MultiFile object
     let tmp: String;
@@ -37,7 +44,7 @@ fn main(){
                     Some(Path::new(&tmp))}
     };
     let now = Instant::now();
-    let mf = match MultiFile::buildinterpolate(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, 
+    let mf = match MultiFile::buildinterpolate(&cbfdir, &ponidir, imageformat, tthmin, tthmax, tthbins, chimin, chimax, 
         chibins, pfactor,maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis, Some(&unit), None, fluxentry){
             Ok(m) => m,
             Err(_e) => {eprintln!("error. Exiting"); exit(1)}

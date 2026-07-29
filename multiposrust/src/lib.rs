@@ -9,14 +9,14 @@ sync::Arc, vec};
 use glob::{ glob};
 use functions::{save1d, cakeav, getmedian, closestindexordered,getyz};
 
-use crate::{functions::yzcompare, imagereader::ImageFlux, poniinterpolator::{Interpolators, PoniList}};
+use crate::{functions::yzcompare, imagereader::{ImageFlux, ImageFormat}, poniinterpolator::{Interpolators, PoniList}};
 
 #[derive(Debug)]
 pub struct BuildError;
 
 mod functions;
 pub mod poniinterpolator;
-mod imagereader;
+pub mod imagereader;
 
 pub struct ImagePoni{
     pub namestem: String,
@@ -144,13 +144,18 @@ pub struct MultiFile{
 
 impl MultiFile{
 
-    pub fn build(cbfdir:&String, ponidir: &String, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
+    pub fn build(cbfdir:&String, ponidir: &String, imageformat:ImageFormat, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
                 chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, unit:Option<&str>, ymotor:&String,
             zmotor:&String, flatfieldfile: Option<&Path>, fluxentry: Option<String>) -> Result<MultiFile,BuildError> {
                     //let units = strtoUnits(units);
+                    let fileextension = match imageformat{
+                        ImageFormat::Cbf => "cbf",
+                        ImageFormat::Edf => "edf",
+                        ImageFormat::Eiger => "hdf5"
+                    };
                     let units = optiontostr(unit);
                     let mut dc: Option<Arc<DetectorConfig>> = None;
-                    let pattern = format!("{cbfdir}/*.cbf");
+                    let pattern = format!("{cbfdir}/*.{fileextension}");
                     let cbffiles = glob(&pattern).unwrap();
                     let mut cbffile: Arc<PathBuf>;
                     let binding: edf::Edf;
@@ -224,10 +229,16 @@ impl MultiFile{
                     Ok(MultiFile { ilist,  tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, units })
                 }
 
-    pub fn buildinterpolate(cbfdir:&String, ponidir: &String,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
+    pub fn buildinterpolate(cbfdir:&String, ponidir: &String, imageformat:ImageFormat,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
         chibins:usize,pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, ponipattern:&String, ymotor:&String, 
         zmotor:&String,saveponis:bool, unit:Option<&str>, flatfieldfile: Option<&Path>,
         fluxentry: Option<String>)-> Result<MultiFile, BuildError>{
+
+        let fileextension = match imageformat{
+            ImageFormat::Cbf => "cbf",
+            ImageFormat::Edf => "edf",
+            ImageFormat::Eiger => "hdf5"
+        };
         let units = optiontostr(unit);
         let plist = PoniList::build(ponidir, ponipattern, ymotor, zmotor);
         let p0 = plist.ponilist[0].poni.clone();
@@ -235,7 +246,7 @@ impl MultiFile{
         let t = plist.gettriangulations();
         let interp = Interpolators::build(&t);
 
-        let cbfpattern = format!("{cbfdir}/*.cbf");
+        let cbfpattern = format!("{cbfdir}/*.{fileextension}");
         let mut ilist: Vec<ImagePoni> = Vec::new();
         let binding: Edf;
         let mask: Option<&Array> = match maskfile {
@@ -580,8 +591,8 @@ mod tests{
         let unit = Some("TwoTheta");
         let ymotor = String::from("dty");
         let zmotor = String::from("dtz");
-        let _mf = MultiFile::build(&cbfdir, &ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
-            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor, None, Some(String::from("noflux"))).unwrap();
+        let _mf = MultiFile::build(&cbfdir, &ponidir, ImageFormat::Cbf, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
+            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor, None, Some(String::from("# Flux "))).unwrap();
 
     }
 

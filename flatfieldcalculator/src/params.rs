@@ -13,6 +13,9 @@ pub struct ParamsFF{
     /// poni directory - only need corner (convex hull) detector positions and the rest will be interpolated
     #[arg(long)]
     pub ponidir: String,
+    /// file extension for image files. "cbf", "edf" or "hdf5"
+    #[arg(long, default_value="cbf")]
+    pub fileextension: String,
     /// minimum 2theta
     #[arg(short, long)]
     pub tthmin : f64,

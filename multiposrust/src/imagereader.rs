@@ -3,7 +3,7 @@ use cryiorust::{cbf::Cbf, edf::Edf, eiger::Eiger, frame::{Array, Frame, HeaderEn
 
 
 #[derive(Debug)]
-enum ImageFormat {
+pub enum ImageFormat {
     Cbf,
     Edf,
     Eiger,    
@@ -11,7 +11,7 @@ enum ImageFormat {
 
 
 impl ImageFormat{
-    fn fromfilename(filename:&Path)->Result<ImageFormat,ImageReadError >{
+    pub fn fromfilename(filename:&Path)->Result<ImageFormat,ImageReadError >{
         let ext = filename.extension().unwrap().to_str().unwrap();
         match ext{
             "cbf" => return Ok(ImageFormat::Cbf),
@@ -19,6 +19,15 @@ impl ImageFormat{
             "hdf5" => return Ok(ImageFormat::Eiger),
             _ => return Err(ImageReadError)
         }
+    }
+    pub fn fromextension(fileextension: String)-> Result<ImageFormat, ImageReadError>{
+         let imageformat = match fileextension.to_lowercase().as_str(){
+            "cbf" | ".cbf"  => ImageFormat::Cbf,
+            "edf" | ".edf" => ImageFormat::Edf,
+            "hdf5" | ".hdf5" | "eiger" => ImageFormat::Eiger,
+            _ => {eprintln!("invalid file format given {fileextension}."); return Err(ImageReadError)},
+        };
+        Ok(imageformat)
     }
 }
 

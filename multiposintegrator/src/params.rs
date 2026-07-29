@@ -13,6 +13,9 @@ pub struct Params{
     /// poni directory - only need corner (convex hull) positions and the rest will be interpolated
     #[arg(long)]
     pub ponidir: String,
+    /// file extension for image files. "cbf", "edf" or "hdf5"
+    #[arg(long, default_value="cbf")]
+    pub fileextension: String,
     /// minimum 2theta
     #[arg(short, long)]
     pub tthmin : f64,
@@ -73,7 +76,7 @@ pub struct Params{
     /// flat-field file (optional)
     #[arg(long, default_value=None)]
     pub flatfieldfile: Option<String>,
-    /// flux (monitor) header entry (default "# Flux " for cbf, "Flux" for edf. Use "noflux" for pre-flux-normalised data (ignores flux))
+    /// flux (monitor) header entry (default "# Flux " for cbf, "Flux" for edf). Use "noflux" for pre-flux-normalised data (ignores flux)
     #[arg(long, default_value=None)]
     pub fluxentry: Option<String>,
 }

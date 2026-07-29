@@ -3,6 +3,7 @@ use std::process::exit;
 use std::{time::Instant};
 use clap::Parser;
 use multiposrust::MultiFile;
+use multiposrust::imagereader::ImageFormat;
 use crate::params::Params;
 
 mod params;
@@ -34,6 +35,12 @@ fn main() {
     let unit = ap.unit;
     let flatfieldfileo = ap.flatfieldfile;
     let fluxentry = ap.fluxentry;
+    let fileextension = ap.fileextension;
+
+    let imageformat = match ImageFormat::fromextension(fileextension){
+        Ok(i) => i,
+        Err(_e) => {eprintln!("Exiting."); exit(2)}
+    };
 
     let tmp:String;
     let maskfile: Option<&Path> = match maskfilestr {
@@ -53,7 +60,7 @@ fn main() {
         false => None,        
     };
     
-    let mf = match MultiFile::buildinterpolate(cbfdir, ponidir, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
+    let mf = match MultiFile::buildinterpolate(cbfdir, ponidir, imageformat, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
         pfactor, maskfile,maskdir, &ponipattern, &ymotor, &zmotor, saveponis, Some(&unit), flatfieldfile, fluxentry){
             Ok(m) => m,
             Err(_e) => {eprintln!("exiting"); exit(1)}
