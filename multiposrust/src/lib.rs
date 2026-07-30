@@ -313,7 +313,7 @@ impl MultiFile{
             ilist.push(ip);
         }
         if ilist.len() < 2{
-            eprintln!("coudn't find any files in {cbfdir}");
+            eprintln!("coudn't find any {fileextension} files in {cbfdir}");
             return Err(BuildError)
         }
         Ok(MultiFile{ilist, tthmin,tthmax, tthbins, chimin,chimax,chibins,pfactor, units})
@@ -336,6 +336,9 @@ impl MultiFile{
     }
 
     pub fn average_cakes(self, medianfilter:f64, cakedir: Option<&String>, avdir: &String, cakemaskfile: Option<String>)->Cake{
+        let namestem = &self.ilist[0].namestem.clone();
+        let namevec: Vec<&str> = namestem.split("_").collect();
+        let namestart = namevec[0];
         let cakes = self.integrate_all(cakedir);
         println!("\naveraging cakes");
         let c0 = &cakes[0];
@@ -412,7 +415,7 @@ impl MultiFile{
         let a:Array = Array::with_data(chisize,radsize, avvec);
         //println!("{vec1d:?}");
         
-        let fname1d  = format!("{avdir}/av1d_2.xye");
+        let fname1d  = format!("{avdir}/{namestart}_av1d_2.xye");
         save1d(fname1d, rpos, &vec1d, Some(&sigma));
         let mut newcake:Cake = Default::default(); 
         newcake.cake = a; 
@@ -421,12 +424,12 @@ impl MultiFile{
         newcake.radial.intensity = vec1d;   
         newcake.radial.sigma = sigma;
         newcake.radial.positions = rpos.clone();
-        let fnameav = format!("{avdir}/avcake.edf");
+        let fnameav = format!("{avdir}/{namestart}_avcake.edf");
         println!("saving cake to {}",&fnameav);
         newcake.store(&fnameav, None).unwrap();
         
         let av1d_alt = cakeav(&cakes, cakemask, medianfilter);
-        let fname1d_alt = format!("{avdir}/av1d.xy");
+        let fname1d_alt = format!("{avdir}/{namestart}_av1d.xy");
         save1d(fname1d_alt, rpos, &av1d_alt, None);
 
         newcake
@@ -434,6 +437,8 @@ impl MultiFile{
 
     pub fn integrate_fluosub(self, medianfilter:f64, cakedir: Option<&String>, avdir: &String, cakemaskfile: Option<String>, 
                         fluo_k0:f64, tthindex:usize)->Cake{
+        let namestem = &self.ilist[0].namestem.clone();
+        let namestart= namestem.split("_").next().unwrap();
         let pfactor = self.pfactor;
         if let Some(cd) = cakedir{
             let _ = create_dir(&cd);
@@ -442,8 +447,8 @@ impl MultiFile{
         let newcake = fluosub_curvefit(fluo_k0, cake, pfactor, tthindex);
         let fsdir = format!("{avdir}fluoSub");
         let _ = create_dir(&fsdir);
-        let fname = format!("{}/avcake.edf", &fsdir);
-        let fname1d = format!("{}/avcake.xye", &fsdir);
+        let fname = format!("{}/{namestart}_avcake.edf", &fsdir);
+        let fname1d = format!("{}/{namestart}_avcake.xye", &fsdir);
         println!("saving fluo sub cake to {}",&fname);
         newcake.store(&fname, None).unwrap();
         let av1d = &newcake.radial.intensity;

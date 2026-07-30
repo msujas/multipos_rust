@@ -76,7 +76,7 @@ pub struct Params{
     /// flat-field file (optional)
     #[arg(long, default_value=None)]
     pub flatfieldfile: Option<String>,
-    /// flux (monitor) header entry (default "# Flux " for cbf, "Flux" for edf). Use "noflux" for pre-flux-normalised data (ignores flux)
-    #[arg(long, default_value=None)]
+    #[arg(long, default_value=None, help = concat!("flux (monitor) header entry (default \"# Flux \" for cbf, \"Flux\" for edf).",
+                                "\nUse \"noflux\" for pre-flux-normalised data (ignores flux)"))]
     pub fluxentry: Option<String>,
 }
