@@ -82,4 +82,7 @@ pub struct Params{
     /// minimum flux value to filter images
     #[arg(long, default_value=None)]
     pub minflux: Option<f64>,
+    /// median filter for cosmics
+    #[arg(long, default_value_t=4.)]
+    pub medianfilter: f64,
 }

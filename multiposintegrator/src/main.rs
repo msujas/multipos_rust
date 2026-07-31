@@ -37,6 +37,7 @@ fn main() {
     let fluxentry = ap.fluxentry;
     let fileextension = ap.fileextension;
     let minflux = ap.minflux;
+    let medianfilter = ap.medianfilter;
 
     let imageformat = match ImageFormat::fromextension(fileextension){
         Ok(i) => i,
@@ -70,10 +71,10 @@ fn main() {
     println!("loading cbfs and ponis took {} s", e1.as_secs());
     let avdir = format!("{cbfdir}/{subdir}");
     if fluosub{
-        mf.integrate_fluosub(4., cakedir, &avdir, cakemaskfile, fluok0, tthbins*96/100);
+        mf.integrate_fluosub(medianfilter, cakedir, &avdir, cakemaskfile, fluok0, tthbins*96/100);
     }
     else {
-        mf.average_cakes(4., cakedir, &avdir, cakemaskfile);
+        mf.average_cakes(medianfilter, cakedir, &avdir, cakemaskfile);
     };
     let elapsed =  now.elapsed();
     println!("");

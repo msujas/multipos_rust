@@ -74,7 +74,7 @@ fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Ar
         let flux = imf.flux;
         if let Some(minf) = minflux{
             if flux < minf{
-                println!("{:?} below flux threshold",cbffile);
+                println!("{:?} below flux threshold. Flux: {flux}, threshold: {minf}",cbffile);
                 return Ok(None);
             }
         }
