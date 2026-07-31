@@ -435,7 +435,7 @@ dependencies = [
 [[package]]
 name = "fluosubtraction_rust"
 version = "0.1.0"
-source = "git+https://github.com/msujas/fluosubtraction_rust#12c8a05d579c2b5678b82ffcaf76dcb0a502cb22"
+source = "git+https://github.com/msujas/fluosubtraction_rust#d543944952d022608c12e8dfebe6061d09c95058"
 dependencies = [
  "cryiorust",
  "integrustio",

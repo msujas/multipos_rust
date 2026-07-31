@@ -1,6 +1,6 @@
 use chrono::{DateTime, Datelike, Local};
 use cryiorust::{edf::{self, Edf}, frame::{ Array, Frame, Header, HeaderEntry::{self}}, poni::{DetectorConfig, Poni}};
-use fluosubtraction_rust::functions::fluosub_curvefit;
+use fluosubtraction_rust::functions::{fluosub_cake, fluosub_curvefit};
 use integrustio::{ geometry::{IntoGeometry, Units::{self}}, integrator::{Cake, Integrator, KEY_BUBBLE_MADE}};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator,  ParallelIterator};
 use core::f64;
@@ -9,7 +9,7 @@ sync::Arc, vec};
 use glob::{ glob};
 use functions::{save1d, cakeav, getmedian, closestindexordered,getyz};
 
-use crate::{functions::yzcompare, imagereader::{ImageFlux, ImageFormat}, poniinterpolator::{Interpolators, PoniList}};
+use crate::{functions::{getcakemask, yzcompare}, imagereader::{ImageFlux, ImageFormat}, poniinterpolator::{Interpolators, PoniList}};
 
 #[derive(Debug)]
 pub struct BuildError;
@@ -22,6 +22,18 @@ pub struct ImagePoni{
     pub namestem: String,
     pub poni:Poni,
     pub normalisedarray:Array,
+}
+
+impl Clone for ImagePoni{
+    fn clone(&self) -> Self {
+        let namestem = self.namestem.clone();
+        let poni = self.poni.clone();
+        let dim1 = self.normalisedarray.dim1();
+        let dim2 = self.normalisedarray.dim2();
+        let data = self.normalisedarray.data().clone();
+        let normalisedarray = Array::with_data(dim1, dim2, data);
+        ImagePoni { namestem, poni, normalisedarray }
+    }
 }
 
 fn strtounits(unitstr:Option<&str>)->Units{
@@ -127,8 +139,23 @@ impl ImagePoni {
         }
         cake
     }
+
+    pub fn get_cake_fluosub(self, tthmin:f64, tthmax:f64,tthbins:usize, chimin:f64,chimax: f64, chibins: usize, pfactor: f64,
+                            cakedir:Option<&String>, units: &str, fluok:f64)->Cake{
+        let mut fname = self.namestem.clone();
+        fname.push_str(".edf");
+        let cake = self.get_cake(tthmin, tthmax, tthbins, chimin, chimax, chibins, pfactor, cakedir, units);
+        let cakefluosub = fluosub_cake(cake, pfactor, fluok);
+        if let Some(cd) = cakedir{
+            let cakefile = format!("{}/{}",cd,fname);
+            println!("saving individual cake to {}",&cakefile);
+            cakefluosub.store(&cakefile, None).unwrap();
+        }
+        cakefluosub
+    }
 }
 
+#[derive(Clone)]
 pub struct MultiFile{
     ilist :Vec<ImagePoni>,
     tthmin: f64,
@@ -335,6 +362,21 @@ impl MultiFile{
         cakes
     }
 
+    pub fn integrate_all_fluosub(self, cakedir: Option<&String>, fluok:f64)->Vec<Cake>{
+        println!("integrating cakes with constant fluo subtraction");
+
+        let cakes: Vec<Cake> = self.ilist.into_par_iter()
+        .enumerate()
+        .map(|(i,ip)|{
+            print!("{i}, ");
+            io::stdout().flush().unwrap();
+            ip.get_cake_fluosub(self.tthmin, self.tthmax, self.tthbins, self.chimin, self.chimax, 
+                self.chibins, self.pfactor, cakedir, &self.units, fluok)
+        }).collect();
+        println!("");
+        cakes
+    }
+
     pub fn average_cakes(self, medianfilter:f64, cakedir: Option<&String>, avdir: &String, cakemaskfile: Option<String>)->Cake{
         let namestem = &self.ilist[0].namestem.clone();
         let namevec: Vec<&str> = namestem.split("_").collect();
@@ -361,15 +403,7 @@ impl MultiFile{
         println!("dim2: {radsize}");
         println!("array size {datalen}");
 
-        let tmp :Edf;
-        let cakemask = match cakemaskfile{
-            None => None,
-            Some(s)  if Edf::open(s.clone()).unwrap().array().data().len() == datalen =>{ 
-                tmp = Edf::open(s).unwrap();
-                Some(tmp.array())}
-            _ => {println!("mismatch in cake mask and data length. Ignoring mask");
-                None}  
-        };
+        let cakemask = getcakemask(cakemaskfile, datalen);
 
         for i in 0..datalen{
             let index1d = i%radsize;
@@ -377,7 +411,7 @@ impl MultiFile{
             for c in &cakes{
                 let item = c.cake.data()[i];
                 if item > 0.{
-                    if let Some(cakemask) = cakemask {
+                    if let Some(ref cakemask) = cakemask {
                         if cakemask.data()[i] > 0.{
                         continue;}
                     }
@@ -443,18 +477,35 @@ impl MultiFile{
         if let Some(cd) = cakedir{
             let _ = create_dir(&cd);
         };
-        let cake = self.average_cakes(medianfilter, cakedir, avdir, cakemaskfile);
-        let newcake = fluosub_curvefit(fluo_k0, cake, pfactor, tthindex);
+        let mf2 = self.clone();
+        let cake = self.average_cakes(medianfilter, cakedir, avdir, cakemaskfile.clone());
+        let datalen = cake.cake.data().len();
+        let (newcake, fluok_optimised) = fluosub_curvefit(fluo_k0, cake, pfactor, tthindex);
+        let cakedirfluo = match cakedir{
+            None => None,
+            Some(s) => Some(&format!("{s}fluosub")),
+        };
+        let cakesfluosub = mf2.integrate_all_fluosub(cakedirfluo, fluok_optimised);
+
+        let cakemask = getcakemask(cakemaskfile, datalen );
+
+        let av1d_individuals = cakeav(&cakesfluosub, cakemask, medianfilter);
+        
         let fsdir = format!("{avdir}fluoSub");
+        let fname1d_inds = format!("{}/{namestart}_av_1.xy", &fsdir);
         let _ = create_dir(&fsdir);
         let fname = format!("{}/{namestart}_avcake.edf", &fsdir);
-        let fname1d = format!("{}/{namestart}_avcake.xye", &fsdir);
+        let fname1d_avcake = format!("{}/{namestart}_av_2.xye", &fsdir);
         println!("saving fluo sub cake to {}",&fname);
         newcake.store(&fname, None).unwrap();
         let av1d = &newcake.radial.intensity;
         let tth = &newcake.radial.positions.to_vec();
         let sigma = &newcake.radial.sigma;
-        save1d(fname1d, tth, av1d, Some(sigma));
+        save1d(fname1d_inds, tth, &av1d_individuals, None);
+        save1d(fname1d_avcake, tth, av1d, Some(sigma));
+
+        //let fluosubcakes = self.integrate_all_fluosub(cakedir, fluok_optimised);
+
         newcake
     }
 

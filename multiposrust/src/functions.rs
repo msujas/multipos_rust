@@ -1,5 +1,5 @@
 use std::{cmp::Ordering, fs::File, io::Write, path::Path};
-use cryiorust::{frame::Array};
+use cryiorust::{edf::Edf, frame::{Array, Frame}};
 use integrustio::integrator::Cake;
 
 pub fn getyz(fname:&Path, ymotor:&String, zmotor:&String)->(Option<f64>,Option<f64>){
@@ -47,7 +47,8 @@ pub fn yzcompare(file1:&Path, file2: &Path, ymotor:&String, zmotor:&String)->boo
     ((y1 - y2).abs() < tolerance) & ((z1-z2).abs() < tolerance)
 }
 
-pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<&Array>, medianfilter:f64)-> Vec<f64>{
+/// function that averages all cake 1d patterns together
+pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64)-> Vec<f64>{
 
     let c0 = &cakelist[0];
     let chisize = c0.cake.dim1();
@@ -63,7 +64,7 @@ pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<&Array>, medianfilter:f64)-
                 index = i + j*tthsize;
                 let value = c.cake.data()[index];
                 if c.cake.data()[index] > 0.{
-                    if let Some(cakemask)=cakemask{
+                    if let Some( ref cakemask)=cakemask{
                         if cakemask.data()[index] > 0.1{
                             continue;
                         }
@@ -192,8 +193,23 @@ pub fn closestindexordered(orderedvec: &Vec<f64>, value: f64)->usize{
     i
 }
 
+pub fn getcakemask(cakemaskfile:Option<String>, datalen:usize)-> Option<Array>{
+    let tmp: Edf;
+    let cakemask = match cakemaskfile{
+        None => None,
+        Some(s)  if Edf::open(s.clone()).unwrap().array().data().len() == datalen =>{ 
+            tmp = Edf::open(s).unwrap();
+            let a = tmp.array();
+            let dim1 = a.dim1();
+            let dim2 = a.dim2();
+            let v = a.data().clone();
+            Some(Array::with_data(dim1, dim2,v))}
+        _ => {println!("mismatch in cake mask and data length. Ignoring mask");
+            None}  
+    };
 
-
+    cakemask
+}
 
 #[cfg(test)]
 mod tests{
