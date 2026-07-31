@@ -8,6 +8,6 @@ cryiorust = {git = "https://git.3lp.cx/dyadkin/cryiorust"}
 glob = "0.3.3"
 integrustio = {git = "https://git.3lp.cx/dyadkin/integrustio"}
 rayon = "1.12.0"
-fluosubtraction_rust = { path = "C:/Users/kenneth1a/Documents/git/fluosubtraction_rust"}# git = "https://github.com/msujas/fluosubtraction_rust"}
+fluosubtraction_rust = {git = "https://github.com/msujas/fluosubtraction_rust"}
 chrono = "0.4.45"
 spade = "2.15.1"
