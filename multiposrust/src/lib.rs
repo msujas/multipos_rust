@@ -360,9 +360,10 @@ impl MultiFile{
         Ok(MultiFile{ilist, tthmin,tthmax, tthbins, chimin,chimax,chibins,pfactor, units})
     }
     pub fn integrate_all(self, cakedir: Option<&String>)->Vec<Cake>{
-        
         println!("integrating images");
-
+        if let Some(cd) = cakedir{
+            if !Path::new(cd).exists(){let _ = create_dir(cd);};
+        }
         let cakes: Vec<Cake> = self.ilist.into_par_iter()
         .enumerate()
         .map(|(i,ip)|{
