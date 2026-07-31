@@ -79,4 +79,7 @@ pub struct Params{
     #[arg(long, default_value=None, help = concat!("flux (monitor) header entry (default \"# Flux \" for cbf, \"Flux\" for edf).",
                                 "\nUse \"noflux\" for pre-flux-normalised data (ignores flux)"))]
     pub fluxentry: Option<String>,
+    /// minimum flux value to filter images
+    #[arg(long, default_value=None)]
+    pub minflux: Option<f64>,
 }

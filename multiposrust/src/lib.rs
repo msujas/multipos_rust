@@ -64,13 +64,20 @@ fn optiontostr(unito:Option<&str>)-> String{
     String::from(units)
 }
 
-fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Array>, fluxentry: &Option<String>) -> Result<ImagePoni, BuildError>{
+fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Array>, fluxentry: &Option<String>, minflux: Option<f64>) 
+            -> Result<Option<ImagePoni>, BuildError>{
 
         let imf = match ImageFlux::readimage(cbffile, &fluxentry){
             Err(_e) => return Err(BuildError),
             Ok(i) => i,
         };
         let flux = imf.flux;
+        if let Some(minf) = minflux{
+            if flux < minf{
+                println!("{:?} below flux threshold",cbffile);
+                return Ok(None);
+            }
+        }
         let dim1 = imf.array.dim1();
         let dim2 = imf.array.dim2();
         let name = imf.namestem;
@@ -95,18 +102,19 @@ fn buildip(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Ar
         }
         let normalisedarray = Array::with_data(dim1, dim2, datavec);
 
-        Ok(ImagePoni {namestem: name , poni, normalisedarray })
+        Ok(Some(ImagePoni {namestem: name , poni, normalisedarray }))
     }
 
 impl ImagePoni {
     pub fn build(ponifile:&Path, cbffile: &Path, dc: Option<Arc<DetectorConfig>>, mask: Option<&Array>, flatfield: Option<&Array>,
-    fluxentry: Option<String>) -> Result<ImagePoni, BuildError>{
+    fluxentry: Option<String>,minflux: Option<f64>) -> Result<Option<ImagePoni>, BuildError>{
         let poni = Poni::open(ponifile, dc).unwrap() ;
-        buildip(poni, cbffile, mask, flatfield,&fluxentry)
+        buildip(poni, cbffile, mask, flatfield,&fluxentry,minflux)
     }
 
-    pub fn buildfromponi(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Array>, fluxentry: &Option<String>) -> Result<ImagePoni, BuildError>{
-        buildip(poni, cbffile, mask, flatfield, fluxentry)
+    pub fn buildfromponi(poni:Poni, cbffile: &Path,mask: Option<&Array>, flatfield: Option<&Array>, fluxentry: &Option<String>,
+                        minflux: Option<f64>) -> Result<Option<ImagePoni>, BuildError>{
+        buildip(poni, cbffile, mask, flatfield, fluxentry, minflux)
     }
 
     pub fn integrate(self, tthmin:f64, tthmax:f64, tthbins:usize, chimin:f64, chimax: f64, 
@@ -173,7 +181,7 @@ impl MultiFile{
 
     pub fn build(cbfdir:&String, ponidir: &String, imageformat:ImageFormat, tthmin:f64, tthmax:f64, tthbins:usize, chimin: f64, chimax: f64, 
                 chibins:usize, pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, unit:Option<&str>, ymotor:&String,
-            zmotor:&String, flatfieldfile: Option<&Path>, fluxentry: Option<String>) -> Result<MultiFile,BuildError> {
+            zmotor:&String, flatfieldfile: Option<&Path>, fluxentry: Option<String>, minflux: Option<f64>) -> Result<MultiFile,BuildError> {
                     //let units = strtoUnits(units);
                     let fileextension = match imageformat{
                         ImageFormat::Cbf => "cbf",
@@ -240,8 +248,11 @@ impl MultiFile{
                                     dc = ptemp.detector_config;
                                     getdetconf = false;
                                 }
-                                let ip = ImagePoni::build(&ponifile,&cbffile.clone(), dc.clone(),
-                                 usedmask, flatfield, fluxentry.clone())?;
+                                let ip = match ImagePoni::build(&ponifile,&cbffile.clone(), dc.clone(),
+                                 usedmask, flatfield, fluxentry.clone(), minflux)?{
+                                    None => break,
+                                    Some(imponi) => imponi,
+                                 };
                                 ilist.push(ip);
                                 break;
                             }
@@ -259,7 +270,7 @@ impl MultiFile{
     pub fn buildinterpolate(cbfdir:&String, ponidir: &String, imageformat:ImageFormat,tthmin:f64,tthmax:f64,tthbins:usize,chimin:f64, chimax:f64, 
         chibins:usize,pfactor:f64, maskfile: Option<&Path>, maskdir: Option<String>, ponipattern:&String, ymotor:&String, 
         zmotor:&String,saveponis:bool, unit:Option<&str>, flatfieldfile: Option<&Path>,
-        fluxentry: Option<String>)-> Result<MultiFile, BuildError>{
+        fluxentry: Option<String>, minflux: Option<f64>)-> Result<MultiFile, BuildError>{
 
         let fileextension = match imageformat{
             ImageFormat::Cbf => "cbf",
@@ -336,7 +347,10 @@ impl MultiFile{
                 .expect(&format!("couldn't create file: {}/{}",&outponidir,&outponistr));
                 file.write_all( poni.to_string().as_bytes()).unwrap();
             }
-            let ip = ImagePoni::buildfromponi(poni, &f, usedmask, flatfield, &fluxentry)?;
+            let ip = match ImagePoni::buildfromponi(poni, &f, usedmask, flatfield, &fluxentry, minflux)?{
+                None => continue,
+                Some(imponi) => imponi,
+            };
             ilist.push(ip);
         }
         if ilist.len() < 2{
@@ -346,7 +360,6 @@ impl MultiFile{
         Ok(MultiFile{ilist, tthmin,tthmax, tthbins, chimin,chimax,chibins,pfactor, units})
     }
     pub fn integrate_all(self, cakedir: Option<&String>)->Vec<Cake>{
-        //let mut cakes :Vec<Cake> = Vec::new(); //vec![Default::default(); self.ilist.len()];
         
         println!("integrating images");
 
@@ -363,8 +376,10 @@ impl MultiFile{
     }
 
     pub fn integrate_all_fluosub(self, cakedir: Option<&String>, fluok:f64)->Vec<Cake>{
-        println!("integrating cakes with constant fluo subtraction");
-
+        println!("integrating images with constant fluo subtraction. fluok: {fluok}");
+        if let Some(cd) = cakedir{
+            if !Path::new(cd).exists(){let _ = create_dir(cd);};
+        }
         let cakes: Vec<Cake> = self.ilist.into_par_iter()
         .enumerate()
         .map(|(i,ip)|{
@@ -405,6 +420,7 @@ impl MultiFile{
 
         let cakemask = getcakemask(cakemaskfile, datalen);
 
+        // averaging cakes together and calculating 1d from the averaged cake
         for i in 0..datalen{
             let index1d = i%radsize;
             let mut atemp: Vec<f64> = Vec::new();
@@ -447,7 +463,6 @@ impl MultiFile{
             sigma[j] = intj.powf(0.5)/div1d[j]; //approximation of error, square root intensity divide by number of values
         }
         let a:Array = Array::with_data(chisize,radsize, avvec);
-        //println!("{vec1d:?}");
         
         let fname1d  = format!("{avdir}/{namestart}_av1d_2.xye");
         save1d(fname1d, rpos, &vec1d, Some(&sigma));
@@ -648,7 +663,7 @@ mod tests{
         let ymotor = String::from("dty");
         let zmotor = String::from("dtz");
         let _mf = MultiFile::build(&cbfdir, &ponidir, ImageFormat::Cbf, tthmin, tthmax, tthbins, chimin, chimax, chibins, 
-            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor, None, Some(String::from("# Flux "))).unwrap();
+            pfactor, maskfile, maskdir, unit, &ymotor, &zmotor, None, Some(String::from("# Flux ")), None).unwrap();
 
     }
 

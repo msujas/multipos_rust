@@ -30,6 +30,7 @@ fn main(){
     let unit = ap.unit;
     let fluxentry = ap.fluxentry;
     let fileextension = ap.fileextension;
+    let minflux = ap.minflux;
 
     let imageformat = match ImageFormat::fromextension(fileextension){
         Ok(i) => i,
@@ -45,7 +46,8 @@ fn main(){
     };
     let now = Instant::now();
     let mf = match MultiFile::buildinterpolate(&cbfdir, &ponidir, imageformat, tthmin, tthmax, tthbins, chimin, chimax, 
-        chibins, pfactor,maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis, Some(&unit), None, fluxentry){
+        chibins, pfactor,maskfile, maskdir, ponipattern, ymotor, zmotor, saveponis, Some(&unit), None, fluxentry,
+        minflux){
             Ok(m) => m,
             Err(_e) => {eprintln!("error. Exiting"); exit(1)}
          };
