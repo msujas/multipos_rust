@@ -56,26 +56,26 @@ pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64)->
     let mut av1d : Vec<f64> = vec![0.; tthsize];
     let mut divvec: Vec<f64> = vec![0.;tthsize];
     let mut index: usize;
-
+    let cakemed = cakemedian(&cakelist);
     for c in cakelist{
         for i in 0..tthsize{
-            let mut vtemp : Vec<f64> = Vec::new();
+            let mut tthslice : Vec<f64> = Vec::new(); // vector of a tth slice
             for j in 0..chisize{
                 index = i + j*tthsize;
                 let value = c.cake.data()[index];
-                if c.cake.data()[index] > 0.{
+                if (value > 0.) & (value < cakemed[index]*medianfilter) & (value > cakemed[index]/medianfilter){
                     if let Some( ref cakemask)=cakemask{
-                        if cakemask.data()[index] > 0.1{
+                        if cakemask.data()[index] > 0.01{
                             continue;
                         }
                     }
-                    vtemp.push(value);
+                    tthslice.push(value);
                 }
             }
-            let med = getmedian(&vtemp);
+            let med = getmedian(&tthslice);
             let mut intensity = 0.;
             let mut div = 0.;
-            for item in vtemp{
+            for item in tthslice{
                 if (item < med*medianfilter) & (item > med/medianfilter){
                     intensity += item;
                     div += 1.;
@@ -93,6 +93,23 @@ pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64)->
         }
     }
 av1d
+}
+
+pub fn cakemedian(cakelist: &Vec<Cake>)->Vec<f64>{
+    let mut cakemedian : Vec<f64> = Vec::new();
+    let dlen = cakelist[0].cake.data().len();
+    for i in 0..dlen{
+        let mut tthchibin : Vec<f64> = Vec::new();
+        for cake in cakelist.iter(){
+            let value = cake.cake.data()[i];
+            if value > 0.{
+                tthchibin.push(value);
+            }
+        }
+        cakemedian.push(getmedian(&tthchibin));
+
+    }
+    cakemedian
 }
 
 pub fn save1d(fname:String, tthrange: &Vec<f64>, vec1d: &Vec<f64>, sigma : Option<&Vec<f64>>){
