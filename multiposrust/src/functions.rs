@@ -48,7 +48,7 @@ pub fn yzcompare(file1:&Path, file2: &Path, ymotor:&String, zmotor:&String)->boo
 }
 
 /// function that averages all cake 1d patterns together
-pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64)-> Vec<f64>{
+pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64, savedir:Option<String>)-> Vec<f64>{
 
     let c0 = &cakelist[0];
     let chisize = c0.cake.dim1();
@@ -57,9 +57,11 @@ pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64)->
     let mut divvec: Vec<f64> = vec![0.;tthsize];
     let mut index: usize;
     let cakemed = cakemedian(&cakelist);
-    for c in cakelist{
+    for (cakeno,c) in cakelist.iter().enumerate(){
+        let mut cfiltereddata: Vec<f64> = vec![0.;tthsize*chisize];
         for i in 0..tthsize{
-            let mut tthslice : Vec<f64> = Vec::new(); // vector of a tth slice
+            let mut tthslice : f64 = 0.;
+            let mut div = 0.;
             for j in 0..chisize{
                 index = i + j*tthsize;
                 let value = c.cake.data()[index];
@@ -69,22 +71,35 @@ pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64)->
                             continue;
                         }
                     }
-                    tthslice.push(value);
-                }
-            }
-            let med = getmedian(&tthslice);
-            let mut intensity = 0.;
-            let mut div = 0.;
-            for item in tthslice{
-                if (item < med*medianfilter) & (item > med/medianfilter){
-                    intensity += item;
+                    cfiltereddata[index] =value;
+                    tthslice += value;
                     div += 1.;
                 }
             }
+
             if div > 0. {
-                av1d[i] += intensity/div;
+                av1d[i] += tthslice/div;
                 divvec[i] += 1.;
             }    
+        }
+        if let Some(ref sd) = savedir{
+            let a = Array::with_data(chisize, tthsize, cfiltereddata);
+            let pattern = cakeget1d(&a);
+            let mut sigma:Vec<f64> = Vec::new();
+            for p in pattern.iter(){
+                sigma.push(p.powf(0.5));
+            }
+            let mut newcake: Cake = Default::default();
+            newcake.cake = a;
+            newcake.azimuthal_positions = c.azimuthal_positions.clone();
+            newcake.radial_positions = c.radial_positions.clone();
+            newcake.radial.intensity = pattern;
+            newcake.radial.positions = c.radial_positions.clone();
+            newcake.radial.sigma = sigma;
+            
+            let filename = format!("{sd}/{cakeno:03}.edf");
+            println!("saving cake as {filename}");
+            let _ = newcake.store(filename, None);
         }
     }
     for (x, d) in av1d.iter_mut().zip(divvec.iter_mut()){
@@ -93,6 +108,29 @@ pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64)->
         }
     }
 av1d
+}
+
+
+fn cakeget1d(cakearray: &Array)-> Vec<f64>{
+    let chisize = cakearray.dim1();
+    let tthsize = cakearray.dim2();
+    let mut pattern1d: Vec<f64> = vec![0.;tthsize];
+    for t in 0..tthsize{
+        let mut tthslice = 0.;
+        let mut div = 0.;
+        for c in 0..chisize{
+            let index = t + c*tthsize;
+            let value = cakearray.data()[index];
+            if value > 0.{
+                tthslice += value;
+                div += 1.
+            }
+        }
+        if div > 0.{
+            pattern1d[t] = tthslice/div;
+        }
+    }
+    pattern1d
 }
 
 pub fn cakemedian(cakelist: &Vec<Cake>)->Vec<f64>{

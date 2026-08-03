@@ -477,8 +477,13 @@ impl MultiFile{
         let fnameav = format!("{avdir}/{namestart}_avcake.edf");
         println!("saving cake to {}",&fnameav);
         newcake.store(&fnameav, None).unwrap();
-        
-        let av1d_alt = cakeav(&cakes, cakemask, medianfilter);
+        let filtcakedir = match cakedir{
+            None => None,
+            Some(s) => {let dname = format!("{s}/filtered"); 
+            if !Path::new(&dname).exists() {let _ = create_dir(&dname);} ;
+                Some(dname)},
+        };
+        let av1d_alt = cakeav(&cakes, cakemask, medianfilter, filtcakedir);
         let fname1d_alt = format!("{avdir}/{namestart}_av1d.xy");
         save1d(fname1d_alt, rpos, &av1d_alt, None);
 
@@ -505,7 +510,13 @@ impl MultiFile{
 
         let cakemask = getcakemask(cakemaskfile, datalen );
 
-        let av1d_individuals = cakeav(&cakesfluosub, cakemask, medianfilter);
+        let cakedirfluofilt = match cakedirfluo {
+            None => None,
+            Some(s) => {let newdir = format!("{s}/filtered");
+                                if !Path::new(&newdir).exists(){let _ = create_dir(&newdir);};
+                                Some(newdir)}
+        };
+        let av1d_individuals = cakeav(&cakesfluosub, cakemask, medianfilter, cakedirfluofilt);
         
         let fsdir = format!("{avdir}fluoSub");
         let fname1d_inds = format!("{}/{namestart}_av_1.xy", &fsdir);
