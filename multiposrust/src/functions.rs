@@ -48,7 +48,7 @@ pub fn yzcompare(file1:&Path, file2: &Path, ymotor:&String, zmotor:&String)->boo
 }
 
 /// function that averages all cake 1d patterns together
-pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64, savedir:Option<String>)-> Vec<f64>{
+pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64, savedir:Option<String>)-> (Vec<f64>, Vec<f64>){
 
     let c0 = &cakelist[0];
     let chisize = c0.cake.dim1();
@@ -56,7 +56,10 @@ pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64, s
     let mut av1d : Vec<f64> = vec![0.; tthsize];
     let mut divvec: Vec<f64> = vec![0.;tthsize];
     let mut index: usize;
-    let cakemed = cakemedian(&cakelist);
+    let cstats = getcakestats(&cakelist);
+    let cakemed = cstats.median;
+    let cakestdev = cstats.stdev;
+    let med1d = cakeget1d(&Array::with_data(chisize, tthsize, cakemed.clone()));
     for (cakeno,c) in cakelist.iter().enumerate(){
         let mut cfiltereddata: Vec<f64> = vec![0.;tthsize*chisize];
         for i in 0..tthsize{
@@ -65,7 +68,10 @@ pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64, s
             for j in 0..chisize{
                 index = i + j*tthsize;
                 let value = c.cake.data()[index];
-                if (value > 0.) & (value < cakemed[index]*medianfilter) & (value > cakemed[index]/medianfilter){
+                let median = cakemed[index];
+                let stdev = cakestdev[index];
+                if (value > 0.) & (value < median*medianfilter) & (value > median/medianfilter) & 
+                (value > median - medianfilter*stdev) & (value < median + stdev*medianfilter){
                     if let Some( ref cakemask)=cakemask{
                         if cakemask.data()[index] > 0.01{
                             continue;
@@ -99,7 +105,7 @@ pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64, s
             
             let filename = format!("{sd}/{cakeno:03}.edf");
             println!("saving cake as {filename}");
-            let _ = newcake.store(filename, None);
+            let _ = newcake.store(filename, None);           
         }
     }
     for (x, d) in av1d.iter_mut().zip(divvec.iter_mut()){
@@ -107,7 +113,7 @@ pub fn cakeav(cakelist: &Vec<Cake>, cakemask: Option<Array>, medianfilter:f64, s
         *x = *x/ *d;
         }
     }
-av1d
+(av1d, med1d)
 }
 
 
@@ -133,8 +139,14 @@ fn cakeget1d(cakearray: &Array)-> Vec<f64>{
     pattern1d
 }
 
-pub fn cakemedian(cakelist: &Vec<Cake>)->Vec<f64>{
+pub struct Cakestats{
+    pub median: Vec<f64>,
+    pub stdev: Vec<f64>,
+}
+
+pub fn getcakestats(cakelist: &Vec<Cake>)->Cakestats{
     let mut cakemedian : Vec<f64> = Vec::new();
+    let mut cakestdev: Vec<f64> = Vec::new();
     let dlen = cakelist[0].cake.data().len();
     for i in 0..dlen{
         let mut tthchibin : Vec<f64> = Vec::new();
@@ -144,10 +156,11 @@ pub fn cakemedian(cakelist: &Vec<Cake>)->Vec<f64>{
                 tthchibin.push(value);
             }
         }
+        cakestdev.push(getstdev(&tthchibin));
         cakemedian.push(getmedian(&tthchibin));
 
     }
-    cakemedian
+    Cakestats { median: cakemedian, stdev: cakestdev }
 }
 
 pub fn save1d(fname:String, tthrange: &Vec<f64>, vec1d: &Vec<f64>, sigma : Option<&Vec<f64>>){
@@ -188,6 +201,40 @@ pub fn getmedian(medvec:&Vec<f64>)->f64{
         return (svec[pos-1] + svec[pos])/2.;
     }
     return svec[pos]
+}
+
+fn getmean(vec: &Vec<f64>)->f64{
+    let mut sum = 0.;
+    let mut div = 0.;
+    for value in vec{
+        if *value > 0. { // 0 considered masked value in cake
+            sum += value;
+            div += 1.;
+        }
+    }
+    if div > 0.{
+        return sum/div;
+    }
+    0.
+}
+
+fn getstdev(vec:&Vec<f64>)->f64{
+    let mean = getmean(vec);
+    if mean <= 0.{
+        return 0.;
+    }
+    let mut var = 0.;
+    let mut div = 0.;
+    for value in vec{
+        if *value > 0.{
+            var += (mean-value).powi(2);
+            div += 1.;
+        }
+    }
+
+    var = var/div;
+    var.powf(0.5)
+
 }
 
 pub fn cmpf64(a:&f64,b:&f64)->Ordering{

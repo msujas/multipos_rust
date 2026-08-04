@@ -7,9 +7,9 @@ use core::f64;
 use std::{borrow::Cow,  f64::consts::PI, fs::{File, create_dir}, io::{self, BufWriter,  Write}, path::{Path, PathBuf}, 
 sync::Arc, vec};
 use glob::{ glob};
-use functions::{save1d, cakeav, getmedian, closestindexordered,getyz};
+use functions::{save1d, cakeav, closestindexordered,getyz};
 
-use crate::{functions::{getcakemask, yzcompare}, imagereader::{ImageFlux, ImageFormat}, poniinterpolator::{Interpolators, PoniList}};
+use crate::{functions::{getcakemask, getcakestats, yzcompare}, imagereader::{ImageFlux, ImageFormat}, poniinterpolator::{Interpolators, PoniList}};
 
 #[derive(Debug)]
 pub struct BuildError;
@@ -421,29 +421,30 @@ impl MultiFile{
 
         let cakemask = getcakemask(cakemaskfile, datalen);
 
+        let cakestats = getcakestats(&cakes);
+        let cakemed = cakestats.median;
+        let cakestdev = cakestats.stdev;
+        let somecakemask = match &cakemask{
+            None => vec![0.; datalen],
+            Some(m) => m.data().clone(),
+        };
+
         // averaging cakes together and calculating 1d from the averaged cake
         for i in 0..datalen{
             let index1d = i%radsize;
-            let mut atemp: Vec<f64> = Vec::new();
+            let mut intensity=0.;
+            let mut div = 0.;
+            let median = cakemed[i];
+            let stdev = cakestdev[i];
             for c in &cakes{
                 let item = c.cake.data()[i];
-                if item > 0.{
-                    if let Some(ref cakemask) = cakemask {
-                        if cakemask.data()[i] > 0.{
-                        continue;}
-                    }
-                    atemp.push(item);
-                }
-            }
-            let mut div: f64 = 0.;
-            let mut intensity :f64 = 0.;
-            let med = getmedian(&atemp);
-            for val in atemp{
-                if !(val > med*medianfilter) & !(val < med/medianfilter){
-                    intensity += val;
+                if (item > 0.) & (item > median - stdev*medianfilter) & (item < median+ stdev*medianfilter) & (somecakemask[i] < 0.01) &
+                (item < median*medianfilter) & (item > median/medianfilter){
+                    intensity += item;
                     div += 1.;
                 }
             }
+
             if div > 0.1 {
                 intensity = intensity/div;
             }
@@ -483,9 +484,11 @@ impl MultiFile{
             if !Path::new(&dname).exists() {let _ = create_dir(&dname);} ;
                 Some(dname)},
         };
-        let av1d_alt = cakeav(&cakes, cakemask, medianfilter, filtcakedir);
+        let (av1d_alt, med1d) = cakeav(&cakes, cakemask, medianfilter, filtcakedir);
         let fname1d_alt = format!("{avdir}/{namestart}_av1d.xy");
+        let fname1d_med = format!("{avdir}/{namestart}_med1d.xy");
         save1d(fname1d_alt, rpos, &av1d_alt, None);
+        save1d(fname1d_med, rpos, &med1d, None);
 
         newcake
     }
@@ -516,13 +519,14 @@ impl MultiFile{
                                 if !Path::new(&newdir).exists(){let _ = create_dir(&newdir);};
                                 Some(newdir)}
         };
-        let av1d_individuals = cakeav(&cakesfluosub, cakemask, medianfilter, cakedirfluofilt);
+        let (av1d_individuals, med1d) = cakeav(&cakesfluosub, cakemask, medianfilter, cakedirfluofilt);
         
         let fsdir = format!("{avdir}fluoSub");
         let fname1d_inds = format!("{}/{namestart}_av_1.xy", &fsdir);
         let _ = create_dir(&fsdir);
         let fname = format!("{}/{namestart}_avcake.edf", &fsdir);
         let fname1d_avcake = format!("{}/{namestart}_av_2.xye", &fsdir);
+        let fnamemed1d = format!("{}/{namestart}",&fsdir);
         println!("saving fluo sub cake to {}",&fname);
         newcake.store(&fname, None).unwrap();
         let av1d = &newcake.radial.intensity;
@@ -530,6 +534,7 @@ impl MultiFile{
         let sigma = &newcake.radial.sigma;
         save1d(fname1d_inds, tth, &av1d_individuals, None);
         save1d(fname1d_avcake, tth, av1d, Some(sigma));
+        save1d(fnamemed1d, tth, &med1d, None);
 
         //let fluosubcakes = self.integrate_all_fluosub(cakedir, fluok_optimised);
 
@@ -568,7 +573,6 @@ impl MultiFile{
             for (i,pix) in data.iter().enumerate(){
                 let y = i / dim2;
                 let x =  i % dim2;
-                //let (tth, chi) = geo.compute_tth_chi(y as f64, x as f64);
                 let pd = geo.compute_pixel(y, x);
                 let pol = pd.polar;
                 let sa = pd.sa;
@@ -609,7 +613,6 @@ impl MultiFile{
             for (i, (pix, tthi)) in data.iter().zip(tthiv).enumerate(){
                 let y = i / dim2;
                 let x = i % dim2;
-                //let (tth, chi) = geo.compute_tth_chi(y as f64, x as f64);
                 let pd = geo.compute_pixel(y, x);
                 let pol = pd.polar;
                 let sa = pd.sa;
