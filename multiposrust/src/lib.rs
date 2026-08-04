@@ -560,12 +560,12 @@ impl MultiFile{
         let a0 = &self.ilist[0].normalisedarray;
         let dim1 = a0.dim1();
         let dim2 = a0.dim2();
-        let scale = 1e7;
         println!("dim1: {dim1}, dim2: {dim2}");
+        let sascale = 1e6;
         for (n,ip) in self.ilist.iter().enumerate(){
             tthindexvec.push(Vec::new());
             let geo = ip.poni.geometry(&Units::TwoTheta, self.pfactor, 0., 0.);
-            
+            let scale = sascale*ip.poni.pixel1*ip.poni.pixel2/(ip.poni.distance.powi(2));
             let data = ip.normalisedarray.data();    
             
             print!("{n}, ");
@@ -575,7 +575,7 @@ impl MultiFile{
                 let x =  i % dim2;
                 let pd = geo.compute_pixel(y, x);
                 let pol = pd.polar;
-                let sa = pd.sa;
+                let sa = pd.sa*scale;
                 let tth = pd.tth;
                 let chi = pd.chi;
                 let tthdeg = tth*deg;
@@ -586,7 +586,7 @@ impl MultiFile{
                 }
                 let tthindex = closestindexordered(&tthrange, tthdeg);
                 
-                tthvalues[tthindex] += *pix * scale/(pol * sa);
+                tthvalues[tthindex] += *pix /(pol * sa);
                 tthdiv[tthindex] += 1.;
                 tthindexvec[n].push(tthindex as i32);
             }
@@ -605,22 +605,23 @@ impl MultiFile{
 
         let mut gainsum : Vec<f64> = vec![0.;cbfsize];
         let mut gaindiv : Vec<f64> = vec![0.;cbfsize];
-
+        
         //println!("{tthindexvec:?}");
         for (ip, tthiv) in self.ilist.iter().zip(tthindexvec.iter()){
             let geo = ip.poni.geometry(&Units::TwoTheta, self.pfactor, 0., 0.);
+            let scale = sascale*ip.poni.pixel1*ip.poni.pixel2/(ip.poni.distance.powi(2));
             let data = ip.normalisedarray.data();
             for (i, (pix, tthi)) in data.iter().zip(tthiv).enumerate(){
                 let y = i / dim2;
                 let x = i % dim2;
                 let pd = geo.compute_pixel(y, x);
                 let pol = pd.polar;
-                let sa = pd.sa;
+                let sa = pd.sa*scale;
                 if *tthi < 0 {
                     continue;
                 }
 
-                let gain = (pix * scale/(pol * sa)) / tthav[*tthi as usize];
+                let gain = (pix /(pol * sa)) / tthav[*tthi as usize];
                 gainsum[i] += gain;
                 gaindiv[i] += 1.;
             }

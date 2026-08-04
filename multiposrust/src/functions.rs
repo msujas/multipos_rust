@@ -330,8 +330,8 @@ mod tests{
         let b2 = floatcompare(m2,12.75);
         println!("{m1}");
         println!("{m2}");
-        assert_eq!(b1, true);
-        assert_eq!(b2, true);
+        assert!(b1);
+        assert!(b2);
     }
 
     /*
