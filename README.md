@@ -1,5 +1,7 @@
 A rewrite of the Python multi position total-scattering processing library (https://github.com/msujas/multipositionpdf) in Rust.
 
+To compile: clone this repository then run ```cargo build --release``` in the directory. Probably convenient to create shortcuts for the executables somewhere that's in your PATH so they can be called from the command line and updates after compiling.
+
 Includes library and executables for integrating data and calculating flat-fields. The executables are called multiposintegrator for the integration program, and flatfieldcalculator for the program calculating flat fields. For the flat fields it is best to use data from an amorphous scatterer such as glass. Data can be measured from an arbitrary number of positions.
 
 Instructions:

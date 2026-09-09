@@ -71,7 +71,7 @@ fn main() {
     println!("loading cbfs and ponis took {} s", e1.as_secs());
     let avdir = format!("{cbfdir}/{subdir}");
     if fluosub{
-        mf.integrate_fluosub(medianfilter, cakedir, &avdir, cakemaskfile, fluok0, tthbins*96/100);
+        mf.integrate_fluosub(medianfilter, cakedir, &avdir, cakemaskfile, fluok0, tthbins*90/100);
     }
     else {
         mf.average_cakes(medianfilter, cakedir, &avdir, cakemaskfile);

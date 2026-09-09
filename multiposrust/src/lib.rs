@@ -562,10 +562,11 @@ impl MultiFile{
         let dim2 = a0.dim2();
         println!("dim1: {dim1}, dim2: {dim2}");
         let sascale = 1e6;
+        // find tth index and value of each pixel
         for (n,ip) in self.ilist.iter().enumerate(){
             tthindexvec.push(Vec::new());
             let geo = ip.poni.geometry(&Units::TwoTheta, self.pfactor, 0., 0.);
-            let scale = sascale*ip.poni.pixel1*ip.poni.pixel2/(ip.poni.distance.powi(2));
+            let scale = sascale*ip.poni.pixel1*ip.poni.pixel2/(ip.poni.distance.powi(2)); //scales to absolute solid angle. Only important for tilted geometries
             let data = ip.normalisedarray.data();    
             
             print!("{n}, ");
@@ -591,6 +592,7 @@ impl MultiFile{
                 tthindexvec[n].push(tthindex as i32);
             }
         }
+        // get average tth value for each bin
         let mut tthav: Vec<f64> = Vec::new();
         for (val, div) in tthvalues.iter().zip(tthdiv.iter()){
             tthav.push(val/div);
@@ -606,7 +608,7 @@ impl MultiFile{
         let mut gainsum : Vec<f64> = vec![0.;cbfsize];
         let mut gaindiv : Vec<f64> = vec![0.;cbfsize];
         
-        //println!("{tthindexvec:?}");
+        // find gain value for all pixels
         for (ip, tthiv) in self.ilist.iter().zip(tthindexvec.iter()){
             let geo = ip.poni.geometry(&Units::TwoTheta, self.pfactor, 0., 0.);
             let scale = sascale*ip.poni.pixel1*ip.poni.pixel2/(ip.poni.distance.powi(2));
