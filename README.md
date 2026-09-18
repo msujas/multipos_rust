@@ -61,6 +61,48 @@ do
 done
 ```
 
+Or with Python using subprocess
+```python
+import subprocess 
+import os
+
+def getcmdlist(**kwargs):
+    flags = ['savecakes','fluosub', 'saveponis']
+    cmd = ['multiposintegrator']
+    for key, val in kwargs.items():
+        if not val:
+            continue
+        if key in flags:
+            cmd += [f'--{key}']
+        else:
+            cmd += [f'--{key}', str(val)]
+    return cmd
+
+ponidir = 'path/to/poni/dir'
+maskfile = 'path/to/mask.edf'
+maskdir=None
+flatfieldfile = 'path/to/flatfield.edf'
+savecakes=True
+
+pfactor=0.85
+tthmin= 0.75
+tthmax=67
+tthbins=5000
+chimin=220
+chimax=320
+chibins = chimax-chimin
+
+for d in os.listdir(ponidir): #searches all files in ponidir
+  cbfdir = f'{ponidir}/{d}'
+  if not os.path.isdir(cbfdir): #if file is not a directory, skips
+    continue
+  print(cbfdir)
+  cmd = getcmdlist(cbfdir=cbfdir, ponidir=ponidir, maskfile=maskfile, maskdir=maskdir, flatfieldfile=flatfieldfile,
+                savecakes=savecakes, tthmin=tthmin, tthmax=tthmax, tthbins=tthbins, chimin=chimin, chimax=chimax,
+                chibins=chibins, pfactor=pfactor)
+  p = subprocess.run(cmd)
+```
+
 Snippet for iterating over all directories in a path
 
 ```bat
